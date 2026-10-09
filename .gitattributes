@@ -1,0 +1,11 @@
+# Store text files with LF line endings in the repo
+* text=auto eol=lf
+
+# PowerShell / batch scripts keep CRLF (Windows tools)
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binary files: never modify
+*.png binary
+*.jpg binary
+*.tgz binary

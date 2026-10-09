@@ -1,0 +1,6 @@
+replicaCount: 1
+page:
+  title: "Webapp DEV v2"
+  environment: dev
+env:
+  LOG_LEVEL: debug

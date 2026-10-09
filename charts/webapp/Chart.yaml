@@ -1,0 +1,6 @@
+apiVersion: v2
+name: webapp
+description: Nginx web app serving a page from ConfigMap 
+type: application
+version: 0.2.0
+appVersion: "1.28"

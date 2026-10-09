@@ -1,0 +1,31 @@
+#--------- Helm -----------
+#Packaged charts are build artifacts (CI buils + pushes them)
+*.tgz
+#Downloaded chart dependencies
+charts/*/charts/
+
+#---------- Terrasform ----------
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfplan
+#tfvars can hold secrets; commit only the example
+*.tfvars
+!*.tfvars.example
+
+#----------- Secrets -------------
+*.pem
+*.key
+*.crt
+kubeconfig*
+.env
+
+#----------- Python (Stage 4) -----------
+__pycache__/
+.venv/
+
+#------------ Editor / OS ----------------
+.vscode/
+Thumbs.db
+Desktop.ini

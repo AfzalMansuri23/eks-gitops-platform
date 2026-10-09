@@ -1,0 +1,16 @@
+replicaCount: 3
+page:
+  title: "Webapp PROD"
+  environment: prod
+env:
+  LOG_LEVEL: warn
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 300m
+    memory: 128Mi
+ingress:
+  enabled: true
+  host: webapp.localhost

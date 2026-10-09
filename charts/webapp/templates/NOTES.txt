@@ -1,0 +1,10 @@
+{{ include "webapp.fullname" . }} is deployed: {{ .Values.replicaCount }} replicas of {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+{{- if .Values.ingress.enabled }}
+
+Open: curl.exe -s http://{{ .Values.ingress.host }}:8080   (with the ingress-nginx port-forward running)
+{{- else }}
+
+Test it:
+  kubectl port-forward svc/{{ include "webapp.fullname" . }} 8081:{{ .Values.service.port }}
+  curl.exe -s http://localhost:8081
+{{- end }}

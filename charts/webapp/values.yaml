@@ -1,0 +1,30 @@
+replicaCount: 2
+image:
+  repository: nginx
+  tag: ""
+  pullPolicy: IfNotPresent
+
+page:
+  title: "Hello from my own PC"
+  environment: dev  
+
+env:
+  LOG_LEVEL: info
+  FEATURE_BANNER : "off"
+
+service: 
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+ingress:
+  enabled: false
+  className: nginx
+  host: web.localhost
