@@ -62,6 +62,15 @@ flowchart LR
 - [kind](https://kind.sigs.k8s.io/), kubectl, Helm 3
 - A kind cluster with [ingress-nginx](https://kubernetes.github.io/ingress-nginx/) installed (needed for prod only)
 
+### Quick start (PowerShell)
+
+```powershell
+.\scripts\deploy.ps1 -Env dev     # or -Env prod
+.\scripts\teardown.ps1            # removes both environments (or -Env dev / -Env prod)
+```
+
+The scripts wrap the Helm commands below. `deploy.ps1` waits until pods are Ready (`--wait`), and `teardown.ps1` uninstalls the release and deletes its namespace. Both are safe to run repeatedly.
+
 ### Deploy dev
 
 ```powershell
@@ -93,6 +102,7 @@ curl.exe -s http://webapp.localhost:8080
 ```powershell
 helm uninstall webapp -n webapp-dev
 helm uninstall webapp -n webapp-prod
+kubectl delete namespace webapp-dev webapp-prod
 ```
 ## Environments
 
