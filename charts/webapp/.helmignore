@@ -1,0 +1,11 @@
+# Files Helm should not include when packaging this chart
+.DS_Store
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
