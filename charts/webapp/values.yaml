@@ -1,21 +1,33 @@
+# -- Number of pod replicas
 replicaCount: 2
+
 image:
+  # -- Container image respository
   repository: nginx
+  # -- image tag. Empty means use the chart's appVersion
   tag: ""
+  # -- Image pull policy
   pullPolicy: IfNotPresent
 
 page:
-  title: "Hello from my own PC"
-  environment: dev  
+  # -- Titile shown on the web page
+  title: "Hello from webapp"
+  # -- Enviorment name shown on the page (required)
+  environment: dev
 
+#-- Enviorment variables, as a map of NAME: "value"
+#Quote valies like "on"/"off"/"yes"/"no" so YAML keeps them as strings
 env:
   LOG_LEVEL: info
-  FEATURE_BANNER : "off"
+  FEATURE_BANNER: "off"
 
-service: 
+service:
+  # -- Service type : ClusterIP, NodePort or LoadBalancer
   type: ClusterIP
+  # -- Service Port
   port: 80
 
+# -- Container CPU/Memeory request and limits
 resources:
   requests:
     cpu: 50m
@@ -25,6 +37,9 @@ resources:
     memory: 128Mi
 
 ingress:
+  # -- Create an ingress resource
   enabled: false
+  # -- IngressClass to use
   className: nginx
+  # -- Hostname the INgress routes to this app
   host: web.localhost
