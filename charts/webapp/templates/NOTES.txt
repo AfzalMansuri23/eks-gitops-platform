@@ -1,10 +1,13 @@
-{{ include "webapp.fullname" . }} is deployed: {{ .Values.replicaCount }} replicas of {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+{{- $name := include "webapp.fullname" . }}
+{{ $name }} is deployed in namespace {{ .Release.Namespace }}: {{ .Values.replicaCount }} {{ ternary "replica" "replicas" (eq (int .Values.replicaCount) 1) }} of {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
 {{- if .Values.ingress.enabled }}
 
-Open: curl.exe -s http://{{ .Values.ingress.host }}:8080   (with the ingress-nginx port-forward running)
+Test it through the Ingress:
+  kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
+  curl.exe -s http://{{ .Values.ingress.host }}:8080
 {{- else }}
 
 Test it:
-  kubectl port-forward svc/{{ include "webapp.fullname" . }} 8081:{{ .Values.service.port }}
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ $name }} 8081:{{ .Values.service.port }}
   curl.exe -s http://localhost:8081
 {{- end }}
