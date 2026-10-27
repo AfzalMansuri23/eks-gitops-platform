@@ -33,6 +33,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
+      # AWS steps run on main only; the IAM role trusts refs/heads/main only
       - name: Configure AWS credentials
         if: github.ref == 'refs/heads/main'
         uses: aws-actions/configure-aws-credentials@v4
