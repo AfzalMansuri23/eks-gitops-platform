@@ -21,9 +21,9 @@ data "aws_iam_policy_document" "github_assume" {
     }
 
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:AfzalMansuri23@89499605/eks-gitops-platform@1421311778:*"]
+      values   = ["repo:AfzalMansuri23@89499605/eks-gitops-platform@1421311778:ref:refs/heads/main"]
     }
   }
 }
