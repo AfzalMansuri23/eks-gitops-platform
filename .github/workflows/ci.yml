@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build:
@@ -31,3 +32,22 @@ jobs:
           exit-code: "1"
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+
+      - name: Configure AWS credentials
+        if: github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::957187558193:role/github-actions-terraform
+          aws-region: ap-south-1
+
+      - name: Login to ECR
+        if: github.ref == 'refs/heads/main'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push
+        if: github.ref == 'refs/heads/main'
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/eks-gitops-platform/api:${{ github.sha }}
+          docker tag api:${{ github.sha }} $IMAGE
+          docker push $IMAGE
