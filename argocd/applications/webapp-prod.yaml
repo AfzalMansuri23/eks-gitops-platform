@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: webapp-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AfzalMansuri23/eks-gitops-platform.git
+    targetRevision: main
+    path: charts/webapp
+    helm:
+      valueFiles:
+        - ../../envs/prod/values.yaml
+      parameters:
+        - name: ingress.host
+          value: gitops-prod.localhost
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitops-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
