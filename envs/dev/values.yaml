@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 2
 page:
   title: "Webapp DEV"
   environment: dev
