@@ -51,7 +51,10 @@ data "aws_iam_policy_document" "github_permissions" {
       "ecr:BatchGetImage",
       "ecr:GetDownloadUrlForLayer",
     ]
-    resources = [aws_ecr_repository.api.arn]
+    resources = [
+      aws_ecr_repository.api.arn,
+      aws_ecr_repository.chart.arn
+    ]
   }
 
   statement {

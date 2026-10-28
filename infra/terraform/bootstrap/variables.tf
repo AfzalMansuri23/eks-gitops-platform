@@ -12,3 +12,7 @@ variable "github_repo" {
   type    = string
   default = "AfzalMansuri23/eks-gitops-platform"
 }
+variable "ecr_chart_repository_name" {
+  type    = string
+  default = "eks-gitops-platform/charts/webapp"
+}
