@@ -1,0 +1,32 @@
+name: helm
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - "envs/**"
+      - ".github/workflows/helm.yml"
+  pull_request:
+    paths:
+      - "charts/**"
+      - "envs/**"
+      - ".github/workflows/helm.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [dev, prod]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Helm lint
+        run: helm lint charts/webapp --strict -f envs/${{ matrix.env }}/values.yaml
+
+      - name: Helm template
+        run: helm template webapp charts/webapp -f envs/${{ matrix.env }}/values.yaml > /dev/null
