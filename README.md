@@ -27,10 +27,12 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 │   ├── network/         # Stage 2: VPC, subnets, IGW, NAT
 │   └── eks/             # Stage 2: EKS cluster, node group, IAM roles
 ├── .github/workflows/   # ci (API image), helm (chart lint + push), terraform-plan (PRs)
-├── argocd/applications/ # Argo CD Application manifests (dev, prod)
+├── argocd/applications/ # Argo CD Application manifests (webapp dev/prod, api)
+├── k8s/api/             # API Deployment, Service, ServiceMonitor, alert rules, dashboard
+├── monitoring/          # kube-prometheus-stack Helm values (kind)
 ├── apps/api/            # FastAPI service (/health, /metrics); Stage 4 RAG service planned
 ├── scripts/             # helper scripts
-└── docs/                # extra documentation
+└── docs/runbooks/       # incident runbooks (also the Stage 4 knowledge base)
 ```
 ## Architecture (Stage 1)
 
@@ -204,6 +206,45 @@ Each Application points at `charts/webapp` on `main` with its `envs/<env>/values
 | Self-heal | `kubectl scale deploy webapp-dev -n gitops-dev --replicas=3` (manual change, bypassing Git) | Argo scaled it back to 1 within the same second; the extra pods lived under a second |
 | Git change | Set `replicaCount: 2` in `envs/dev/values.yaml` and pushed to `main` | Argo synced and `gitops-dev` ran 2 pods about 68 s after the commit (default poll is 3 min) |
 
+## Observability (Prometheus + Grafana)
+
+```mermaid
+flowchart LR
+    subgraph api["ns: api (managed by Argo CD)"]
+        pods[API pods x2<br/>/health, /metrics]
+        svc[Service api:8000]
+        sm[ServiceMonitor]
+        rule[PrometheusRule<br/>4 alerts]
+        dash[ConfigMap<br/>Grafana dashboard]
+        svc --> pods
+    end
+
+    subgraph mon["ns: monitoring (kube-prometheus-stack)"]
+        op[Prometheus Operator]
+        prom[Prometheus]
+        graf[Grafana<br/>+ dashboard sidecar]
+    end
+
+    sm -. discovered by .-> op --> prom
+    rule -. loaded by .-> op
+    prom -->|"scrape /metrics every 15s"| pods
+    prom --> graf
+    dash -. "label grafana_dashboard=1" .-> graf
+```
+
+The monitoring stack is installed with Helm (`monitoring/kube-prometheus-stack-values.yaml`). Everything about the API (Deployment, Service, ServiceMonitor, alert rules and the dashboard) lives in `k8s/api/` and is deployed by Argo CD, so monitoring is configured as code next to the service it watches.
+
+| Alert | Fires when | Severity |
+|---|---|---|
+| `ApiTargetDown` | a pod is not scraped for 1 min | critical |
+| `ApiNoTargets` | no API targets for 2 min | critical |
+| `ApiHighErrorRate` | more than 5% of requests return 5xx for 2 min | warning |
+| `ApiHighLatency` | p95 latency above 500 ms for 5 min | warning |
+
+The "API overview" dashboard shows pods up, requests per second, 5xx rate, p95 latency, request rate by handler and status, latency percentiles, and scrape status per pod.
+
+**Failure drill (verified):** scaling the API to 0 with auto-sync paused made `ApiNoTargets` go pending at about 1 min and fire at about 3 min; restoring auto-sync brought both pods back in 11 s and the alert resolved. With self-heal on, the same change is reverted in under 5 s and no alert fires. Triage steps are in [docs/runbooks/api-down.md](docs/runbooks/api-down.md).
+
 ## Design decisions
 
 - **No long-lived cloud credentials in CI.** Workflows assume IAM roles through GitHub's OIDC provider. The trust policy pins the exact `sub` claim: only `main` can push images, and pull requests can only assume a read-only role. Forked PRs get no OIDC token at all.
@@ -238,4 +279,5 @@ Real issues hit while building this, and how they were fixed.
 - [x] **Stage 1: Kubernetes + Helm.** Custom chart, dev/prod values, values schema, local kind deployment
 - [x] **Stage 2: Terraform on AWS.** VPC and EKS as two root modules, S3 remote state with locking, the same chart deployed and served on EKS, then destroyed to save cost
 - [x] **Stage 3: CI/CD.** API image build, Trivy scan and push to ECR via GitHub OIDC; `helm lint`/`helm template` and chart push to ECR; `terraform plan` on PRs with a read-only role; Argo CD on kind with dev and prod Applications, GitOps drift and self-heal verified
+- [ ] **Observability.** Done: Prometheus + Grafana on kind, API ServiceMonitor, dashboard, 4 alert rules, failure drill and runbook. Next: ELK for logs
 - [ ] **Stage 4: AI service.** A small Amazon Bedrock RAG service deployed on EKS (LLMOps)
