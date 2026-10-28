@@ -30,3 +30,21 @@ jobs:
 
       - name: Helm template
         run: helm template webapp charts/webapp -f envs/${{ matrix.env }}/values.yaml > /dev/null
+
+  push:
+    needs: lint
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: arn:aws:iam::957187558193:role/github-actions-terraform
+          aws-region: ap-south-1
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - run: helm package charts/webapp --version 0.1.0-${{ github.sha }}  --destination .
+      - run: helm push webapp-0.1.0-${{ github.sha }}.tgz oci://${{ steps.ecr.outputs.registry }}/eks-gitops-platform/charts
