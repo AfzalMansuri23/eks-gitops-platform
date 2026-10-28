@@ -9,3 +9,7 @@ output "github_actions_role_arn" {
 output "ecr_chart_repository_url" {
   value = aws_ecr_repository.chart.repository_url
 }
+
+output "github_plan_role_arn" {
+  value = aws_iam_role.github_plan.arn
+}

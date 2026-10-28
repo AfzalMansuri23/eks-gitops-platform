@@ -77,3 +77,36 @@ resource "aws_iam_role_policy" "github_actions" {
   role   = aws_iam_role.github_actions.id
   policy = data.aws_iam_policy_document.github_permissions.json
 }
+
+data "aws_iam_policy_document" "github_plan_assume" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:AfzalMansuri23@89499605/eks-gitops-platform@1421311778:pull_request"]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_plan" {
+  name               = "github-actions-plan"
+  assume_role_policy = data.aws_iam_policy_document.github_plan_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "github_plan_readonly" {
+  role       = aws_iam_role.github_plan.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
