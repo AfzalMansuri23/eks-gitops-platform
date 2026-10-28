@@ -22,7 +22,10 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 ├── envs/
 │   ├── dev/values.yaml  # dev overrides: 1 replica, debug logging
 │   └── prod/values.yaml # prod overrides: 3 replicas, Ingress, bigger resources
-├── infra/terraform/     # bootstrap: ECR repos, GitHub OIDC provider, IAM roles (VPC + EKS planned)
+├── infra/terraform/
+│   ├── bootstrap/       # ECR repos, GitHub OIDC provider, CI IAM roles
+│   ├── network/         # Stage 2: VPC, subnets, IGW, NAT
+│   └── eks/             # Stage 2: EKS cluster, node group, IAM roles
 ├── .github/workflows/   # ci (API image), helm (chart lint + push), terraform-plan (PRs)
 ├── argocd/applications/ # Argo CD Application manifests (dev, prod)
 ├── apps/api/            # FastAPI service (/health, /metrics); Stage 4 RAG service planned
@@ -118,6 +121,40 @@ One chart, two environments. Each `envs/<env>/values.yaml` overrides only what d
 | Namespace | `webapp-dev` | `webapp-prod` |
 
 Values are merged in order: chart `values.yaml` → `envs/<env>/values.yaml` → any `--set` flags. The merged result is validated against `charts/webapp/values.schema.json` before anything is rendered.
+## Infrastructure on AWS (Stage 2)
+
+```mermaid
+flowchart TB
+    subgraph state["S3 remote state (ap-south-1, native locking)"]
+        s1[(network/terraform.tfstate)]
+        s2[(eks/terraform.tfstate)]
+    end
+
+    subgraph vpc["VPC 10.0.0.0/16"]
+        igw[Internet Gateway]
+        subgraph pub["public subnets 10.0.0.0/24, 10.0.1.0/24 (2 AZs)"]
+            nat[NAT gateway + Elastic IP]
+        end
+        subgraph priv["private subnets 10.0.10.0/24, 10.0.11.0/24 (2 AZs)"]
+            cp[EKS control plane ENIs]
+            ng["managed node group<br/>2 x t3.small"]
+        end
+    end
+
+    ng -->|"outbound only"| nat --> igw --> net([Internet])
+    cp --- ng
+    s1 -. "outputs: subnet ids" .-> s2
+```
+
+Two separate root modules, each with its own state: `network` (cheap to keep, rarely changes) and `eks` (expensive, created and destroyed per session). `eks` reads the subnet IDs from the `network` state with `terraform_remote_state`, so the VPC can stay up while the cluster is torn down.
+
+| Module | Creates | Cost while running |
+|---|---|---|
+| `network` | VPC, 2 public + 2 private subnets, Internet Gateway, route tables, 1 NAT gateway + Elastic IP | NAT gateway is billed hourly |
+| `eks` | EKS cluster, cluster and node IAM roles, managed node group of 2 x t3.small | control plane + 2 nodes billed hourly |
+
+This ran end to end in lab sessions: the Helm chart from Stage 1 was deployed to the EKS cluster and served through it, then everything was destroyed and checked clean. The cluster is not kept running; bring it up with `network` first, then `eks`, and tear down in the reverse order.
+
 ## CI/CD and GitOps (Stage 3)
 
 ```mermaid
@@ -199,6 +236,6 @@ Real issues hit while building this, and how they were fixed.
 ## Roadmap
 
 - [x] **Stage 1: Kubernetes + Helm.** Custom chart, dev/prod values, values schema, local kind deployment
-- [ ] **Stage 2: Terraform on AWS.** VPC and EKS, S3 remote state with locking, deploy the same chart to EKS
+- [x] **Stage 2: Terraform on AWS.** VPC and EKS as two root modules, S3 remote state with locking, the same chart deployed and served on EKS, then destroyed to save cost
 - [x] **Stage 3: CI/CD.** API image build, Trivy scan and push to ECR via GitHub OIDC; `helm lint`/`helm template` and chart push to ECR; `terraform plan` on PRs with a read-only role; Argo CD on kind with dev and prod Applications, GitOps drift and self-heal verified
 - [ ] **Stage 4: AI service.** A small Amazon Bedrock RAG service deployed on EKS (LLMOps)
