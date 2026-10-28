@@ -1,0 +1,50 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api
+  namespace: api
+  labels:
+    app.kubernetes.io/name: api
+spec:
+  groups:
+    - name: api.rules
+      rules:
+        - alert: ApiTargetDown
+          expr: up{job="api"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "API pod {{ $labels.pod }} is not being scraped"
+            description: "Prometheus cannot scrape {{ $labels.instance }} for more than 1 minute. The pod is crashing, not ready, or unreachable."
+
+        - alert: ApiNoTargets
+          expr: absent(up{job="api"})
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "No API targets exist"
+            description: "Prometheus has no api targets at all. The Deployment is scaled to 0, deleted, or the ServiceMonitor is gone."
+
+        - alert: ApiHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="api",status="5xx"}[5m]))
+              / sum(rate(http_requests_total{job="api"}[5m])) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "More than 5% of API requests fail with 5xx"
+            description: "5xx ratio is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+        - alert: ApiHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(http_request_duration_highr_seconds_bucket{job="api"}[5m]))) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "API p95 latency is above 500 ms"
+            description: "p95 latency is {{ $value | humanizeDuration }} over the last 5 minutes."
