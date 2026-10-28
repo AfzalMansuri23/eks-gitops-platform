@@ -1,0 +1,32 @@
+alertmanager:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+
+grafana:
+  defaultDashboardsTimezone: Asia/Kolkata
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
