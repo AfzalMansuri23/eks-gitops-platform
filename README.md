@@ -160,6 +160,13 @@ kubectl apply -f argocd/applications/
 
 Each Application points at `charts/webapp` on `main` with its `envs/<env>/values.yaml`, and syncs automatically. Prod overrides the Ingress host to `gitops-prod.localhost` so it does not clash with the Stage 1 release. Argo deploys into separate namespaces (`gitops-dev`, `gitops-prod`), so the Stage 1 releases stay untouched.
 
+### GitOps demo (verified)
+
+| Test | What I did | Result |
+|---|---|---|
+| Self-heal | `kubectl scale deploy webapp-dev -n gitops-dev --replicas=3` (manual change, bypassing Git) | Argo scaled it back to 1 within the same second; the extra pods lived under a second |
+| Git change | Set `replicaCount: 2` in `envs/dev/values.yaml` and pushed to `main` | Argo synced and `gitops-dev` ran 2 pods about 68 s after the commit (default poll is 3 min) |
+
 ## Design decisions
 
 - **No long-lived cloud credentials in CI.** Workflows assume IAM roles through GitHub's OIDC provider. The trust policy pins the exact `sub` claim: only `main` can push images, and pull requests can only assume a read-only role. Forked PRs get no OIDC token at all.
@@ -193,5 +200,5 @@ Real issues hit while building this, and how they were fixed.
 
 - [x] **Stage 1: Kubernetes + Helm.** Custom chart, dev/prod values, values schema, local kind deployment
 - [ ] **Stage 2: Terraform on AWS.** VPC and EKS, S3 remote state with locking, deploy the same chart to EKS
-- [ ] **Stage 3: CI/CD.** In progress. Done: API image build, Trivy scan and push to ECR via GitHub OIDC; `helm lint`/`helm template` and chart push to ECR; `terraform plan` on PRs with a read-only role; Argo CD on kind with dev and prod Applications synced. Left: GitOps drift and self-heal demo, then tick this box
+- [x] **Stage 3: CI/CD.** API image build, Trivy scan and push to ECR via GitHub OIDC; `helm lint`/`helm template` and chart push to ECR; `terraform plan` on PRs with a read-only role; Argo CD on kind with dev and prod Applications, GitOps drift and self-heal verified
 - [ ] **Stage 4: AI service.** A small Amazon Bedrock RAG service deployed on EKS (LLMOps)
