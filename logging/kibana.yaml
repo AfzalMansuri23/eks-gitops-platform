@@ -4,7 +4,7 @@ metadata:
   name: logging
   namespace: logging
 spec:
-  version: 9.5.6
+  version: 9.5.5
   count: 1
   elasticsearchRef:
     name: logging

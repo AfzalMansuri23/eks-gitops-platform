@@ -5,7 +5,7 @@ metadata:
   namespace: logging
 spec:
   type: filebeat
-  version: 9.5.6
+  version: 9.5.5
   elasticsearchRef:
     name: logging
   kibanaRef:
