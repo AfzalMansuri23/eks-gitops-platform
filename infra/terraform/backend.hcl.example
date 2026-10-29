@@ -1,0 +1,2 @@
+# Copy to backend.hcl (gitignored) and use: terraform init -backend-config=../backend.hcl
+bucket = "tf-state-<account-id>-ap-south-1"

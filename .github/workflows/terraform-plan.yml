@@ -25,14 +25,14 @@ jobs:
             
             - uses: aws-actions/configure-aws-credentials@v4
               with:
-                role-to-assume: arn:aws:iam::957187558193:role/github-actions-plan
+                role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
                 aws-region: ap-south-1
 
             - name: Terraform fmt 
               run: terraform fmt -check -recursive
 
             - name: Terraform init
-              run: terraform init -input=false
+              run: terraform init -input=false -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
             - name: Terraform validate
               run: terraform validate
