@@ -20,9 +20,11 @@ spec:
                 equals:
                   kubernetes.namespace: api
               config:
-                - type: container
+                - type: filestream
+                  id: container-${data.kubernetes.container.id}
                   paths:
                     - /var/log/containers/*${data.kubernetes.container.id}.log
+                  prospector.scanner.symlinks: true
                   parsers:
                     - container:
                         stream: all
