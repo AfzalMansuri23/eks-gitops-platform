@@ -39,7 +39,35 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 │   └── knowledge/       # runbooks: 16 tool files + Platform API alert runbooks
 └── scripts/             # helper scripts
 ```
-## Architecture (Stage 1)
+## Architecture
+
+An interactive, animated diagram of the whole platform: 24 components, 27 connections and 7 flows, each component linked to the file that defines it.
+
+- **Live page:** [afzalmansuri23.github.io/eks-gitops-platform/architecture.html](https://afzalmansuri23.github.io/eks-gitops-platform/architecture.html) (served by GitHub Pages from `docs/` on `main`)
+- **In the app:** `/architecture` in ExitZero (footer link "Architecture")
+- **Offline:** open [docs/architecture.html](docs/architecture.html) in a browser. It is one self-contained file with no external requests.
+
+| Flow | What it shows |
+|---|---|
+| Build & publish | push to main, `ci` builds and scans the API image, `helm` packages the chart, both land in ECR |
+| GitOps deploy | Argo CD polls `main` and syncs webapp dev/prod, the API and the logging stack |
+| User request | browser to ingress-nginx to the prod webapp, and browser to ExitZero to the runbooks |
+| Credentials | GitHub OIDC to short-lived AWS roles (main-only vs PR-only), ECK-generated Elasticsearch credentials |
+| Metrics & alerts | ServiceMonitor, Prometheus scrape and alert rules, Grafana dashboard from a ConfigMap |
+| Logs | API stdout to Filebeat to Elasticsearch to Kibana |
+| Infra provisioning | `terraform-plan` on PRs, state in S3, network then EKS applied from a laptop |
+
+Pick a flow to play it hop by hop, hover a component to see what it talks to, click it for details and its source file.
+
+**Updating it:** all content lives in [`apps/assistant/app/static/data/architecture.json`](apps/assistant/app/static/data/architecture.json) (zones, nodes, edges, flows and their steps). After moving or adding nodes, reroute the edges and regenerate the standalone page:
+
+```sh
+cd apps/assistant
+python tools/architecture.py route   # orthogonal A* routing around nodes and labels
+python tools/architecture.py build   # writes docs/architecture.html
+```
+
+## Stage 1: Helm webapp on kind
 
 ```mermaid
 flowchart LR

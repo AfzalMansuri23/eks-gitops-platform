@@ -1,0 +1,365 @@
+/* Architecture diagram. Colors come from tokens.css plus one --flow-<id>
+   variable per flow, set by architecture.js from the config. */
+
+.arch {
+  --arch-node: var(--surface);
+  --arch-zone: var(--border-strong);
+  --arch-track: color-mix(in srgb, var(--text-muted) 18%, transparent);
+  display: grid;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+/* chips */
+.arch-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.arch-chip,
+.arch-legend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: 500 var(--fs-sm) / 1.2 var(--font-body);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.arch-chip:hover,
+.arch-legend-btn:hover {
+  border-color: var(--c, var(--border-strong));
+}
+.arch-chip[aria-pressed="true"] {
+  border-color: var(--c, var(--brand));
+  background: color-mix(in srgb, var(--c, var(--brand)) 16%, var(--surface));
+}
+.arch-chip-sm {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+}
+.arch-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--c);
+  flex: none;
+}
+
+/* diagram */
+.arch-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(circle, var(--grid-line) 1px, transparent 1.2px) 0 0 / 20px 20px,
+    var(--bg-raised);
+}
+.arch-svg {
+  display: block;
+  width: 100%;
+  min-width: 1180px;
+  max-width: none;
+  height: auto;
+  font-family: var(--font-body);
+}
+
+.zone-box {
+  fill: color-mix(in srgb, var(--surface) 35%, transparent);
+  stroke: var(--arch-zone);
+  stroke-width: 1.2;
+  stroke-dasharray: 6 5;
+}
+.zone-label {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  fill: var(--text-muted);
+}
+
+.edge {
+  transition: opacity var(--dur) var(--ease);
+}
+.edge-track {
+  fill: none;
+  stroke: var(--arch-track);
+  stroke-width: 4;
+}
+.edge-line {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 1.8;
+  stroke-dasharray: 7 6;
+  stroke-linecap: round;
+  opacity: 0.85;
+  animation: arch-flow 0.9s linear infinite;
+  transition: stroke-width var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+@keyframes arch-flow {
+  to {
+    stroke-dashoffset: -13;
+  }
+}
+.packet {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.edge.active .edge-line {
+  stroke-width: 3.4;
+  opacity: 1;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--c) 70%, transparent));
+}
+.edge.active .packet {
+  stroke-width: 2.8;
+}
+
+.node {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--dur) var(--ease);
+}
+.node-box {
+  fill: var(--arch-node);
+  stroke: var(--border-strong);
+  stroke-width: 1.2;
+  transition: stroke var(--dur) var(--ease), stroke-width var(--dur) var(--ease);
+}
+.node:hover .node-box,
+.node.on .node-box {
+  stroke: color-mix(in srgb, var(--c) 60%, var(--border-strong));
+}
+.node.lit .node-box {
+  stroke: var(--c);
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c) 55%, transparent));
+}
+.node:focus-visible .node-box {
+  stroke: var(--focus);
+  stroke-width: 2.6;
+}
+.node-tag {
+  fill: color-mix(in srgb, var(--c) 18%, var(--arch-node));
+  stroke: color-mix(in srgb, var(--c) 55%, transparent);
+}
+.node-tag-text {
+  font: 700 11px var(--font-mono);
+  fill: var(--c);
+}
+.node-title {
+  font: 700 14px var(--font-body);
+  fill: var(--text);
+}
+.node-sub {
+  font: 400 10.5px var(--font-mono);
+  fill: var(--text-muted);
+}
+
+.has-focus .edge:not(.on),
+.has-focus .node:not(.on) {
+  opacity: 0.13;
+}
+.has-focus .edge.on:not(.active) .edge-line {
+  opacity: 0.7;
+}
+
+/* panels */
+.arch-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+}
+.arch-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  padding: var(--sp-6);
+  min-width: 0;
+}
+.arch-panel-title {
+  font-size: var(--fs-lg);
+  margin-bottom: var(--sp-2);
+}
+.arch-muted {
+  color: var(--text-muted);
+}
+.arch-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+.arch-legend,
+.arch-step-list,
+.arch-facts {
+  list-style: none;
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+}
+.arch-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.arch-steps-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.arch-steps-head .arch-panel-title {
+  border-left: 3px solid var(--c);
+  padding-left: var(--sp-3);
+  margin: 0;
+}
+.arch-play {
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text);
+  font: 600 var(--fs-sm) var(--font-body);
+  cursor: pointer;
+}
+.arch-play:hover {
+  border-color: var(--brand);
+}
+.arch-step-list {
+  display: grid;
+  gap: var(--sp-1);
+}
+.arch-step {
+  display: flex;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-muted);
+  font: 400 var(--fs-sm) / 1.5 var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+.arch-step:hover {
+  background: var(--surface-2);
+}
+.arch-step.is-current {
+  color: var(--text);
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 10%, var(--surface));
+}
+.arch-step-n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  font: 600 0.75rem var(--font-mono);
+}
+.arch-step.is-current .arch-step-n {
+  border-color: var(--c);
+  background: var(--c);
+  color: var(--bg);
+}
+
+.arch-detail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.arch-detail-head .arch-panel-title {
+  margin: 0;
+}
+.arch-tag {
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  height: 2.25rem;
+  padding: 0 0.4rem;
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  background: color-mix(in srgb, var(--c) 16%, var(--surface));
+  color: var(--c);
+  font: 700 0.8rem var(--font-mono);
+}
+.arch-desc {
+  margin-bottom: var(--sp-3);
+}
+.arch-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-4);
+}
+.arch-facts li {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--r-sm);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  font: 400 0.8rem var(--font-mono);
+}
+.arch-node-flows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-sm);
+}
+.arch-source {
+  font: 500 var(--fs-sm) var(--font-mono);
+  color: var(--brand-text);
+  word-break: break-all;
+}
+
+@media (max-width: 860px) {
+  .arch-panels {
+    grid-template-columns: 1fr;
+  }
+  .arch-panel {
+    padding: var(--sp-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-line {
+    animation: none;
+    stroke-dasharray: none;
+  }
+  .packet {
+    display: none;
+  }
+  .edge,
+  .node,
+  .edge-line,
+  .node-box {
+    transition: none;
+  }
+}
+
+/* /architecture page */
+.arch-page {
+  padding: var(--sp-12) 0 var(--sp-16);
+}
+.arch-page h1 {
+  font-size: clamp(2rem, 5vw, var(--fs-3xl));
+}
+.arch-page .lead {
+  margin: var(--sp-3) 0 var(--sp-6);
+  color: var(--text-muted);
+  font-size: var(--fs-lg);
+  max-width: 44rem;
+}
+/* the diagram gets more room than the text column on wide screens */
+.arch-page .arch-scroll {
+  width: min(1600px, 100vw - 2rem);
+  margin-left: calc(50% - min(800px, 50vw - 1rem));
+}

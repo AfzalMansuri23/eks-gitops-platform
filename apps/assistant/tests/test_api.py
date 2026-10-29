@@ -31,7 +31,7 @@ def test_tools(client):
     assert body["tools"] == kb.tools() and body["entries"] == len(kb.ENTRIES)
 
 
-@pytest.mark.parametrize("path", ["/", "/app", "/access"])
+@pytest.mark.parametrize("path", ["/", "/app", "/access", "/architecture"])
 def test_pages(client, path):
     r = client.get(path)
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
