@@ -260,7 +260,7 @@ flowchart LR
 
     subgraph log["ns: logging (managed by Argo CD)"]
         fb[Filebeat DaemonSet<br/>filestream + container + ndjson]
-        es[(Elasticsearch<br/>1 node, green)]
+        es[(Elasticsearch<br/>1 node)]
         kb[Kibana]
     end
 
@@ -271,6 +271,8 @@ flowchart LR
 ```
 
 The Elastic Cloud on Kubernetes (ECK) operator is installed with Helm (`elastic/eck-operator`); the `Elasticsearch`, `Kibana` and `Beat` custom resources in `logging/` are deployed by Argo CD. Filebeat reads only the `api` namespace, strips the container runtime wrapper, and decodes each JSON line, so `levelname`, `name` and `message` are searchable fields next to the Kubernetes metadata (pod, node, namespace).
+
+Cluster health reads `yellow` once Filebeat's index exists: with one node the replica shards have nowhere to be placed, so they stay unassigned (the data is complete and searchable). For a single-node lab set the index replicas to 0; in production run at least three nodes.
 
 This runs on the kind cluster only (about 2.5 GB of memory). The versions are pinned to 9.5.5, the newest stack version whose images exist on `docker.elastic.co`. Triage steps for a 404 spike are in [docs/runbooks/api-unknown-paths.md](docs/runbooks/api-unknown-paths.md).
 
