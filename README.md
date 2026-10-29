@@ -30,6 +30,7 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 ├── argocd/applications/ # Argo CD Application manifests (webapp dev/prod, api)
 ├── k8s/api/             # API Deployment, Service, ServiceMonitor, alert rules, dashboard
 ├── monitoring/          # kube-prometheus-stack Helm values (kind)
+├── logging/             # Elasticsearch, Kibana, Filebeat (ECK custom resources, kind)
 ├── apps/api/            # FastAPI service (/health, /metrics); Stage 4 RAG service planned
 ├── scripts/             # helper scripts
 └── docs/runbooks/       # incident runbooks (also the Stage 4 knowledge base)
@@ -245,6 +246,34 @@ The "API overview" dashboard shows pods up, requests per second, 5xx rate, p95 l
 
 **Failure drill (verified):** scaling the API to 0 with auto-sync paused made `ApiNoTargets` go pending at about 1 min and fire at about 3 min; restoring auto-sync brought both pods back in 11 s and the alert resolved. With self-heal on, the same change is reverted in under 5 s and no alert fires. Triage steps are in [docs/runbooks/api-down.md](docs/runbooks/api-down.md).
 
+## Logging (ELK)
+
+```mermaid
+flowchart LR
+    subgraph api["ns: api"]
+        pods[API pods<br/>JSON logs on stdout]
+    end
+
+    subgraph node["each node"]
+        files[/var/log/containers<br/>container log files/]
+    end
+
+    subgraph log["ns: logging (managed by Argo CD)"]
+        fb[Filebeat DaemonSet<br/>filestream + container + ndjson]
+        es[(Elasticsearch<br/>1 node, green)]
+        kb[Kibana]
+    end
+
+    eck[ECK operator<br/>ns: elastic-system] -. reconciles .-> es
+    eck -. reconciles .-> kb
+    eck -. reconciles .-> fb
+    pods --> files --> fb --> es --> kb
+```
+
+The Elastic Cloud on Kubernetes (ECK) operator is installed with Helm (`elastic/eck-operator`); the `Elasticsearch`, `Kibana` and `Beat` custom resources in `logging/` are deployed by Argo CD. Filebeat reads only the `api` namespace, strips the container runtime wrapper, and decodes each JSON line, so `levelname`, `name` and `message` are searchable fields next to the Kubernetes metadata (pod, node, namespace).
+
+This runs on the kind cluster only (about 2.5 GB of memory). The versions are pinned to 9.5.5, the newest stack version whose images exist on `docker.elastic.co`. Triage steps for a 404 spike are in [docs/runbooks/api-unknown-paths.md](docs/runbooks/api-unknown-paths.md).
+
 ## Design decisions
 
 - **No long-lived cloud credentials in CI.** Workflows assume IAM roles through GitHub's OIDC provider. The trust policy pins the exact `sub` claim: only `main` can push images, and pull requests can only assume a read-only role. Forked PRs get no OIDC token at all.
@@ -273,11 +302,15 @@ Real issues hit while building this, and how they were fixed.
 | `Could not assume role with OIDC: Not authorized` although the trust policy looks right | The repo uses immutable subject claims, so `sub` is `repo:owner@id/name@id:ref:...` | Match the prefix from `gh api repos/OWNER/REPO/actions/oidc/customization/sub` |
 | `terraform init` in CI: provider checksum does not match the lock file | `.terraform.lock.hcl` was created on Windows and only has the Windows hash | Add the Linux hash: `terraform providers lock -platform=linux_amd64`, commit the file |
 | Trivy fails the build on HIGH CVEs in starlette | The old pinned FastAPI pulled a vulnerable starlette | Bump FastAPI and the metrics instrumentator together |
+| Elastic pods `ImagePullBackOff` with `NotFound` for the image tag | The version exists in the release list but its images were never published to `docker.elastic.co` | Check the tag first: `docker manifest inspect docker.elastic.co/elasticsearch/elasticsearch:<ver>`; pin the newest version that has all three images |
+| Changing an ECK resource to a lower version is rejected: `Version downgrades are not supported` | The ECK admission webhook blocks downgrades | If nothing has run yet, delete the Elasticsearch, Kibana and Beat objects (and the empty PVC) and let Argo recreate them |
+| Argo CD app stays `OutOfSync` after a failed sync, nothing retries | Auto-sync does not retry a commit whose last sync failed | Fix the cause, then trigger a sync: `kubectl -n argocd patch application <app> --type merge -p '{"operation":{"sync":{}}}'` |
+| Filebeat 9 runs but no harvester starts: `Container input is deprecated` | The `container` input type was removed in 9.x | Use `type: filestream` with a unique `id`, `prospector.scanner.symlinks: true` and the `container` parser |
 | Argo CD apps stuck on `Unknown`, API server i/o timeout | The Argo chart's NetworkPolicies are enforced by kind's CNI and block the controller | Local only: `--set global.networkPolicy.create=false`, then restart the Argo pods. Keep the policies on EKS |
 ## Roadmap
 
 - [x] **Stage 1: Kubernetes + Helm.** Custom chart, dev/prod values, values schema, local kind deployment
 - [x] **Stage 2: Terraform on AWS.** VPC and EKS as two root modules, S3 remote state with locking, the same chart deployed and served on EKS, then destroyed to save cost
 - [x] **Stage 3: CI/CD.** API image build, Trivy scan and push to ECR via GitHub OIDC; `helm lint`/`helm template` and chart push to ECR; `terraform plan` on PRs with a read-only role; Argo CD on kind with dev and prod Applications, GitOps drift and self-heal verified
-- [ ] **Observability.** Done: Prometheus + Grafana on kind, API ServiceMonitor, dashboard, 4 alert rules, failure drill and runbook. Next: ELK for logs
+- [x] **Observability.** Prometheus + Grafana on kind with an API ServiceMonitor, dashboard, 4 alert rules, failure drill and runbook; ELK (ECK operator, Elasticsearch, Kibana, Filebeat) for structured API logs
 - [ ] **Stage 4: AI service.** A small Amazon Bedrock RAG service deployed on EKS (LLMOps)
