@@ -4,7 +4,7 @@
 
 RETRIEVER picks the implementation (keyword | embedding | hybrid, default hybrid).
 EMBEDDINGS_BACKEND picks where vectors come from (local | bedrock, default local).
-MIN_SCORE is the cosine similarity below which an embedding match counts as
+MIN_SCORE (default 0.40) is the cosine similarity below which an embedding match counts as
 "not in my runbooks", so gibberish still returns nothing.
 
 Scores are per retriever: keyword = matched phrases + coverage, embedding =
@@ -53,6 +53,17 @@ class KeywordRetriever:
         scored.sort(key=lambda pair: pair[0], reverse=True)
         return [(entry, round(rank[0] + rank[2], 4)) for rank, entry in scored[:k]]
 
+    def exact(self, text: str) -> Entry | None:
+        """The top entry, if it matched an actual error phrase. A bare tool name
+        ("grafana", "argo cd") only says which area, not which error."""
+        hits = self.search(text, 1)
+        if not hits:
+            return None
+        entry = hits[0][0]
+        haystack = text.lower()
+        names = {e.tool.lower() for e in self.entries}
+        return entry if any(kw in haystack and kw not in names for kw in entry.keywords) else None
+
 
 class LocalEmbeddings:
     """all-MiniLM-L6-v2 on CPU through fastembed (ONNX runtime, no torch)."""
@@ -96,7 +107,7 @@ def make_embeddings(backend: str | None = None):
 
 
 def entry_text(entry: Entry) -> str:
-    return f"{entry.title}. {' '.join(entry.keywords)}. {entry.cause}"
+    return f"{entry.tool}: {entry.title}. {' '.join(entry.keywords)}. {entry.cause}"
 
 
 def _normalize(m: np.ndarray) -> np.ndarray:
@@ -111,7 +122,7 @@ class EmbeddingRetriever:
                  cache_dir: Path | None = None):
         self.entries = entries
         self.embeddings = embeddings or make_embeddings()
-        self.min_score = float(os.getenv("MIN_SCORE", "0.45")) if min_score is None else min_score
+        self.min_score = float(os.getenv("MIN_SCORE", "0.40")) if min_score is None else min_score
         self.matrix = self._load_or_build(Path(cache_dir or os.getenv("EMBED_CACHE_DIR", DEFAULT_CACHE)))
 
     def _load_or_build(self, cache_dir: Path) -> np.ndarray:
@@ -139,9 +150,9 @@ class EmbeddingRetriever:
 
 
 class HybridRetriever:
-    """Reciprocal rank fusion of keyword and embedding rankings. Keyword gets the
-    larger weight, so an exact error string still wins; embeddings fill in when the
-    wording differs from every Matches string."""
+    """An exact error-phrase match always comes first. The rest is reciprocal rank
+    fusion of keyword and embedding rankings (keyword weighted higher), so
+    embeddings fill in when the wording differs from every Matches string."""
 
     name = "hybrid"
 
@@ -161,6 +172,9 @@ class HybridRetriever:
         ):
             for rank, (entry, _) in enumerate(hits):
                 fused[entry] = fused.get(entry, 0.0) + weight / (self.rrf_k + rank + 1)
+        pinned = self.keyword.exact(text)
+        if pinned is not None:
+            fused[pinned] = max(fused.values()) + 1.0
         ranked = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)[:k]
         return [(entry, round(score, 5)) for entry, score in ranked]
 

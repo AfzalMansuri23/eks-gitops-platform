@@ -1,0 +1,75 @@
+# Retrieval eval set. `want` is a case-insensitive substring of the expected
+# entry title. exact = real error text that contains a Matches string,
+# paraphrase = the same problem in other words, sharing no Matches string with
+# the expected entry, negative = not in the knowledge base, must return found=false.
+
+exact:
+  - {text: "Not authorized to perform sts:AssumeRoleWithWebIdentity", want: "OIDC role"}
+  - {text: "Trivy: Total: 2 (HIGH: 2) CVE-2025-1234 starlette", want: "Trivy fails"}
+  - {text: "tag invalid: The image tag '0.1.0' already exists in the repository and cannot be overwritten because the repository is immutable", want: "ECR rejects"}
+  - {text: "Error: UPGRADE FAILED: cannot patch deployment: field is immutable spec.selector", want: "field is immutable"}
+  - {text: "Error: Error acquiring the state lock LockID: abc", want: "state is locked"}
+  - {text: "Last State: Terminated Reason: OOMKilled Exit Code: 137", want: "OOMKilled"}
+  - {text: "Warning Unhealthy Readiness probe failed: HTTP probe failed with statuscode: 503", want: "Readiness probe"}
+  - {text: "Unable to connect to the server: dial tcp: lookup abc.eks.amazonaws.com: no such host", want: "wrong context"}
+  - {text: "bootstrap check failure: max virtual memory areas vm.max_map_count [65530] is too low", want: "vm.max_map_count"}
+  - {text: "Error response from daemon: no basic auth credentials", want: "ECR login"}
+  - {text: "flood stage disk watermark [95%] exceeded, index read_only_allow_delete", want: "disk watermark"}
+  - {text: "api-7d9f 0/1 CrashLoopBackOff 6 4m", want: "CrashLoopBackOff"}
+  - {text: "Warning FailedScheduling 0/2 nodes are available: 2 Insufficient memory", want: "Pending"}
+  - {text: "FATAL: no pg_hba.conf entry for host \"10.0.0.7\", user \"app\", database \"shop\"", want: "pg_hba"}
+  - {text: "OOM command not allowed when used memory > 'maxmemory'", want: "Redis: OOM"}
+  - {text: "x509: certificate signed by unknown authority", want: "unknown authority"}
+  - {text: "Access to fetch at 'http://api.local' from origin 'http://localhost:3000' has been blocked by CORS policy", want: "CORS"}
+  - {text: "ERROR 1040 (HY000): Too many connections", want: "MySQL: too many connections"}
+
+paraphrase:
+  - {text: "terraform says someone else is holding the lock on the state file", want: "state is locked"}
+  - {text: "pod stuck waiting, scheduler says no node has enough RAM", want: "Pending (FailedScheduling)"}
+  - {text: "my container keeps restarting over and over and never stays up", want: "CrashLoopBackOff"}
+  - {text: "kubectl says I am not allowed to list pods in this namespace", want: "RBAC"}
+  - {text: "deleting the namespace hangs forever and never finishes", want: "Namespace stuck"}
+  - {text: "the volume claim never gets bound to a disk", want: "PersistentVolumeClaim"}
+  - {text: "a worker machine shows as not ready in the cluster", want: "Node is NotReady"}
+  - {text: "my service has no pods behind it so traffic goes nowhere", want: "no endpoints"}
+  - {text: "the deployment rollout never completes and gives up waiting", want: "Rollout stuck"}
+  - {text: "git refuses my push because the remote has commits I don't have locally", want: "non-fast-forward"}
+  - {text: "the process cannot open any more file handles", want: "Too many open files"}
+  - {text: "the system time on the box keeps drifting away from real time", want: "Clock"}
+  - {text: "my image build can't find a file I am trying to copy in", want: "COPY failed"}
+  - {text: "docker says another container is already using that host port", want: "Port is already allocated"}
+  - {text: "an image built on my arm mac won't run on the amd64 server", want: "exec format"}
+  - {text: "helm says the release name is taken by an existing install", want: "re-use a name"}
+  - {text: "argo cd cannot log in to my private git repo", want: "Repository authentication"}
+  - {text: "the aws cli can't find any access keys configured on this machine", want: "locate credentials"}
+  - {text: "my temporary aws session is no longer valid and needs refreshing", want: "Security token expired"}
+  - {text: "aws keeps slowing me down because I make too many api calls", want: "Throttling"}
+  - {text: "my serverless function runs too long and gets cut off", want: "Lambda"}
+  - {text: "load balancer health checks fail for every backend instance", want: "targets unhealthy"}
+  - {text: "postgres refuses new sessions because the max connection count is reached", want: "PostgreSQL: too many clients"}
+  - {text: "two postgres transactions are each waiting for the other to release a row", want: "deadlock"}
+  - {text: "redis has hit its memory cap and rejects writes", want: "Redis: OOM"}
+  - {text: "uploading a big file through nginx gets rejected as too large", want: "413"}
+  - {text: "the https certificate on my site is out of date", want: "certificate has expired"}
+  - {text: "vault won't hand out secrets until it is unlocked with key shares", want: "Vault is sealed"}
+  - {text: "jenkins build sits in the queue and never starts, no free agent", want: "executor"}
+  - {text: "kafka consumers keep falling further behind the topic", want: "consumer lag"}
+  - {text: "prometheus alert triggers yet slack never receives a message", want: "nobody got notified"}
+  - {text: "elasticsearch stopped accepting writes because the data disk is nearly full", want: "disk watermark"}
+  - {text: "my dashboard graphs are completely empty, the panel draws nothing", want: "No data"}
+  - {text: "someone edited the resource by hand in the console and terraform wants to revert it", want: "drift"}
+  - {text: "terraform wants to destroy and recreate after I renamed a resource block", want: "Rename"}
+  - {text: "the azure portal says my account lacks permission for this action", want: "AuthorizationFailed"}
+  - {text: "gcp project needs a payment account linked before I can use it", want: "Billing"}
+  - {text: "my eks pod uses the node's role instead of its own service account role", want: "IRSA"}
+  - {text: "elasticsearch replicas have nowhere to go on my one node cluster", want: "yellow"}
+  - {text: "the log shipper daemonset runs fine but nothing ever reaches elasticsearch", want: "Filebeat runs"}
+
+negative:
+  - {text: "how do I bake sourdough bread at home"}
+  - {text: "what is the weather in Paris tomorrow"}
+  - {text: "segfault in my toaster"}
+  - {text: "asdf qwer zxcv"}
+  - {text: "recommend a good movie to watch tonight"}
+  - {text: "my cat won't eat its food"}
+  - {text: "lorem ipsum dolor sit amet consectetur"}
