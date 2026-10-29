@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Console · ExitZero</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%20-9%2047%2056%22%3E%3Crect%20x%3D%2221%22%20y%3D%22-3.5%22%20width%3D%222%22%20height%3D%227%22%20rx%3D%221%22%20fill%3D%22%238fa6a9%22/%3E%3Ccircle%20cx%3D%2222%22%20cy%3D%22-4.5%22%20r%3D%222.4%22%20fill%3D%22%231fb5a4%22%20stroke%3D%22%230a1114%22%20stroke-width%3D%221.4%22/%3E%3Crect%20x%3D%2210%22%20y%3D%222.5%22%20width%3D%2224%22%20height%3D%2223%22%20rx%3D%227%22%20fill%3D%22%23eef7f5%22%20stroke%3D%22%230a1114%22%20stroke-width%3D%222%22/%3E%3Ccircle%20cx%3D%2217.5%22%20cy%3D%2211.5%22%20r%3D%222.7%22%20fill%3D%22%230a1114%22/%3E%3Ccircle%20cx%3D%2226.5%22%20cy%3D%2211.5%22%20r%3D%222.7%22%20fill%3D%22%230a1114%22/%3E%3Ccircle%20cx%3D%2218.4%22%20cy%3D%2210.6%22%20r%3D%22.85%22%20fill%3D%22%23fff%22/%3E%3Ccircle%20cx%3D%2227.4%22%20cy%3D%2210.6%22%20r%3D%22.85%22%20fill%3D%22%23fff%22/%3E%3Cellipse%20cx%3D%2222%22%20cy%3D%2217.5%22%20rx%3D%221.7%22%20ry%3D%221.4%22%20fill%3D%22%230a1114%22/%3E%3Crect%20x%3D%224%22%20y%3D%2224%22%20width%3D%2236%22%20height%3D%2222%22%20rx%3D%227%22%20fill%3D%22%231fb5a4%22/%3E%3Crect%20x%3D%222.5%22%20y%3D%2221.5%22%20width%3D%2239%22%20height%3D%226.5%22%20rx%3D%223.2%22%20fill%3D%22%2317a090%22%20stroke%3D%22%230a1114%22%20stroke-width%3D%221.6%22/%3E%3Crect%20x%3D%225%22%20y%3D%2218.5%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%223%22%20fill%3D%22%23eef7f5%22%20stroke%3D%22%230a1114%22%20stroke-width%3D%221.6%22/%3E%3Crect%20x%3D%2233%22%20y%3D%2218.5%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%223%22%20fill%3D%22%23eef7f5%22%20stroke%3D%22%230a1114%22%20stroke-width%3D%221.6%22/%3E%3Cline%20x1%3D%2240.5%22%20y1%3D%22-5%22%20x2%3D%2240.5%22%20y2%3D%224%22%20stroke%3D%22%23f2a649%22%20stroke-width%3D%223.4%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2240.5%22%20cy%3D%229%22%20r%3D%222%22%20fill%3D%22%23f2a649%22/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/site.css">
+  <link rel="stylesheet" href="/static/css/console.css">
+  <script src="/static/js/theme.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script src="/static/js/exitzero.js" defer></script>
+  <script src="/static/js/bot.js" defer></script>
+  <script src="/static/js/console.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="logo" href="/" aria-label="ExitZero home">
+      <svg class="logo-bot" viewBox="0 -9 47 56" aria-hidden="true"><defs><linearGradient id="ez-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1fb5a4"/><stop offset="1" stop-color="#5da9e9"/></linearGradient></defs><rect x="21" y="-3.5" width="2" height="7" rx="1" fill="#8fa6a9"/><circle cx="22" cy="-4.5" r="2.4" fill="#1fb5a4" stroke="#0a1114" stroke-width="1.4"/><rect x="10" y="2.5" width="24" height="23" rx="7" fill="#eef7f5" stroke="#0a1114" stroke-width="2"/><circle cx="17.5" cy="11.5" r="2.7" fill="#0a1114"/><circle cx="26.5" cy="11.5" r="2.7" fill="#0a1114"/><circle cx="18.4" cy="10.6" r=".85" fill="#fff"/><circle cx="27.4" cy="10.6" r=".85" fill="#fff"/><ellipse cx="22" cy="17.5" rx="1.7" ry="1.4" fill="#0a1114"/><rect x="4" y="24" width="36" height="22" rx="7" fill="url(#ez-g)"/><rect x="2.5" y="21.5" width="39" height="6.5" rx="3.2" fill="#17a090" stroke="#0a1114" stroke-width="1.6"/><rect x="5" y="18.5" width="6" height="6" rx="3" fill="#eef7f5" stroke="#0a1114" stroke-width="1.6"/><rect x="33" y="18.5" width="6" height="6" rx="3" fill="#eef7f5" stroke="#0a1114" stroke-width="1.6"/><line x1="40.5" y1="-5" x2="40.5" y2="4" stroke="#f2a649" stroke-width="3.4" stroke-linecap="round"/><circle cx="40.5" cy="9" r="2" fill="#f2a649"/></svg>
+      ExitZero
+    </a>
+    <nav class="nav-links" id="nav-links" aria-label="Main">
+      <a href="/#features">Features</a>
+      <a href="/#how">How it works</a>
+      <a href="/#incidents">Incident log</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch between light and dark">
+        <i data-lucide="sun" class="i-sun"></i><i data-lucide="moon" class="i-moon"></i>
+      </button>
+      <a class="btn btn-ghost" href="/access">Sign in</a>
+      <button class="icon-btn nav-toggle" id="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><i data-lucide="menu"></i></button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="console mood">
+  <div class="container">
+    <h1>What just broke?</h1>
+    <p class="lead">Paste any error from your stack. ExitZero works out which tool it came from.</p>
+
+    <div class="bot-stage" id="bot-stage">
+    <form class="panel" id="ask-form">
+      <label for="error">Error output</label>
+      <textarea id="error" name="error" required minlength="3" maxlength="4000" placeholder="Error: ErrImagePull ... manifest unknown"></textarea>
+      <div class="examples">
+        <span>Try one:</span>
+        <button type="button" class="example" data-text='Back-off pulling image "docker.elastic.co/elasticsearch/elasticsearch:9.5.6"&#10;Error: ErrImagePull: manifest unknown'>Image pull error</button>
+        <button type="button" class="example" data-text="Error: Error acquiring the state lock&#10;ConditionalCheckFailedException: The conditional request failed&#10;Lock Info: ID: 3f1c2a">Terraform lock</button>
+        <button type="button" class="example" data-text="Warning: Back-off restarting failed container filebeat in pod filebeat-beat-filebeat-2rm9b">Filebeat restarts</button>
+        <button type="button" class="example" data-text="rpc error: code = Unknown desc = Get https://argocd-repo-server:8081: dial tcp 10.96.4.2:8081: i/o timeout">Argo CD timeout</button>
+      </div>
+      <div class="examples" id="recent-wrap" hidden>
+        <span>Recent:</span>
+        <span class="recent" id="recent"></span>
+        <button type="button" class="link-btn" id="clear-recent">Clear</button>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary btn-lg" id="ask-btn" type="submit"><i data-lucide="search"></i><span>Find the fix</span></button>
+        <span class="hint">Ctrl + Enter to send</span>
+      </div>
+    </form>
+    </div>
+
+    <div id="error-box" class="error-box" role="alert" hidden>
+      <i data-lucide="circle-alert"></i><span id="error-text"></span>
+    </div>
+
+    <section id="result" class="result" aria-live="polite" hidden></section>
+  </div>
+</main>
+</body>
+</html>

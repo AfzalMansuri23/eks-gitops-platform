@@ -2,7 +2,7 @@
 
 A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app running on Kubernetes, growing into Terraform-provisioned AWS EKS, CI/CD with GitHub Actions and Argo CD, and an LLM-powered RAG service.
 
-> **Current status:** Stage 1 complete: Helm chart deployed to a local kind cluster with separate dev and prod configurations.
+> **Current status:** Stages 1 to 3 and observability are complete. Stage 4 is in progress: **ExitZero**, a troubleshooting assistant with a web UI and a 248-entry runbook knowledge base, runs locally ([details](#troubleshooting-assistant-exitzero-stage-4-in-progress)).
 
 ## Tech stack
 
@@ -13,6 +13,8 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 | Infrastructure as Code | Terraform *(Stage 2)* |
 | Cloud | AWS: VPC, EKS, S3, ECR, Bedrock *(Stages 2–4)* |
 | CI/CD | GitHub Actions, Argo CD *(Stage 3)* |
+| Observability | Prometheus, Grafana, Elasticsearch, Kibana, Filebeat (ECK) |
+| AI assistant | FastAPI + static web UI, runbook retrieval, Amazon Bedrock planned *(Stage 4)* |
 
 ## Repository layout
 
@@ -31,9 +33,11 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 ├── k8s/api/             # API Deployment, Service, ServiceMonitor, alert rules, dashboard
 ├── monitoring/          # kube-prometheus-stack Helm values (kind)
 ├── logging/             # Elasticsearch, Kibana, Filebeat (ECK custom resources, kind)
-├── apps/api/            # FastAPI service (/health, /metrics); Stage 4 RAG service planned
-├── scripts/             # helper scripts
-└── docs/runbooks/       # incident runbooks (also the Stage 4 knowledge base)
+├── apps/api/            # FastAPI service (/health, /metrics)
+├── apps/assistant/      # Stage 4: ExitZero troubleshooting assistant (FastAPI + web UI)
+│   ├── app/             # API (/ask, /tools), knowledge loader, pages, CSS/JS
+│   └── knowledge/       # runbooks: 16 tool files + Platform API alert runbooks
+└── scripts/             # helper scripts
 ```
 ## Architecture (Stage 1)
 
@@ -244,7 +248,7 @@ The monitoring stack is installed with Helm (`monitoring/kube-prometheus-stack-v
 
 The "API overview" dashboard shows pods up, requests per second, 5xx rate, p95 latency, request rate by handler and status, latency percentiles, and scrape status per pod.
 
-**Failure drill (verified):** scaling the API to 0 with auto-sync paused made `ApiNoTargets` go pending at about 1 min and fire at about 3 min; restoring auto-sync brought both pods back in 11 s and the alert resolved. With self-heal on, the same change is reverted in under 5 s and no alert fires. Triage steps are in [docs/runbooks/api-down.md](docs/runbooks/api-down.md).
+**Failure drill (verified):** scaling the API to 0 with auto-sync paused made `ApiNoTargets` go pending at about 1 min and fire at about 3 min; restoring auto-sync brought both pods back in 11 s and the alert resolved. With self-heal on, the same change is reverted in under 5 s and no alert fires. Triage steps are in the [Platform API runbooks](apps/assistant/knowledge/platform-api.md).
 
 ## Logging (ELK)
 
@@ -274,7 +278,44 @@ The Elastic Cloud on Kubernetes (ECK) operator is installed with Helm (`elastic/
 
 Cluster health reads `yellow` once Filebeat's index exists: with one node the replica shards have nowhere to be placed, so they stay unassigned (the data is complete and searchable). For a single-node lab set the index replicas to 0; in production run at least three nodes.
 
-This runs on the kind cluster only (about 2.5 GB of memory). The versions are pinned to 9.5.5, the newest stack version whose images exist on `docker.elastic.co`. Triage steps for a 404 spike are in [docs/runbooks/api-unknown-paths.md](docs/runbooks/api-unknown-paths.md).
+This runs on the kind cluster only (about 2.5 GB of memory). The versions are pinned to 9.5.5, the newest stack version whose images exist on `docker.elastic.co`. Triage steps for a 404 spike are in the [Platform API runbooks](apps/assistant/knowledge/platform-api.md).
+
+## Troubleshooting assistant: ExitZero (Stage 4, in progress)
+
+ExitZero takes a pasted error from any tool in the stack, works out which tool it came from, and answers with the likely cause, the fix, copyable commands and the source it came from. When nothing matches it says "not in my runbooks yet" instead of guessing.
+
+```mermaid
+flowchart LR
+    user([Engineer]) -->|pastes an error| ui[Web UI<br/>landing page + console]
+    ui -->|POST /ask| api[FastAPI<br/>apps/assistant]
+    api --> kb[(Knowledge base<br/>40 project incidents<br/>+ 208 runbook entries)]
+    kb -->|best match| api
+    api -->|tool, cause, fix,<br/>commands, sources| ui
+    api -. next step .-> bedrock[Embeddings +<br/>Amazon Bedrock]
+```
+
+| Part | What it does |
+|---|---|
+| `apps/assistant/knowledge/*.md` | 208 runbook entries in a strict format (exact error strings, cause, fix, commands): Kubernetes, Docker, Linux, AWS/EKS/ECR, GCP/GKE, Azure/AKS, Terraform, Helm, Argo CD, GitHub Actions, GitLab CI, Jenkins, Git, networking/TLS/Nginx, Postgres, MySQL, Redis, MongoDB, Prometheus, Grafana, Loki, Elasticsearch, Datadog, OpenTelemetry, Ansible, Vault, Kafka, Istio, plus this repo's Platform API alert runbooks with their drill records |
+| `apps/assistant/app/kb.py` | 40 real incidents from building this platform and from the course labs, plus the loader that parses the runbook files (46 tools in total) |
+| `POST /ask` | Returns `found`, the detected `tool`, `cause`, `fix`, `commands`, `related` entries and `sources` |
+| Web UI | Landing page with a live demo box, a console, and a sign-in page that is a design mock (no accounts). A small bot in the console reacts to what is happening: thinking while it searches, happy on a match, a shrug when nothing matches. Commands copy with one click |
+
+**Run it locally**
+
+```powershell
+cd apps/assistant
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --port 8001
+```
+
+Then open http://localhost:8001 (landing page) or http://localhost:8001/app (console).
+
+**How matching works today:** each entry lists the exact error strings it covers. The best entry is the one with the most matched strings, then the longest (most specific) match. Tested on 46 realistic error messages across every tool (46/46 correct), and 247 of 248 entries are found by their own error text (the one exception, `AssumeRoleWithWebIdentity`, genuinely fits both GitHub OIDC and EKS IRSA, so the answer lists the other under "Also similar").
+
+**Next:** embedding-based retrieval so errors worded differently still match, a Dockerfile and Argo CD Application, an evaluation set, then Amazon Bedrock to write the answer (blocked for now at the AWS account level, so the backend is pluggable).
 
 ## Design decisions
 
@@ -316,3 +357,6 @@ Real issues hit while building this, and how they were fixed.
 - [x] **Stage 3: CI/CD.** API image build, Trivy scan and push to ECR via GitHub OIDC; `helm lint`/`helm template` and chart push to ECR; `terraform plan` on PRs with a read-only role; Argo CD on kind with dev and prod Applications, GitOps drift and self-heal verified
 - [x] **Observability.** Prometheus + Grafana on kind with an API ServiceMonitor, dashboard, 4 alert rules, failure drill and runbook; ELK (ECK operator, Elasticsearch, Kibana, Filebeat) for structured API logs
 - [ ] **Stage 4: AI service.** A small Amazon Bedrock RAG service deployed on EKS (LLMOps)
+  - [x] ExitZero web UI and API, 248-entry runbook knowledge base, tool detection, copyable commands
+  - [ ] Embedding retrieval, evaluation set, container image and Argo CD deployment
+  - [ ] Amazon Bedrock answers (waiting on account access)

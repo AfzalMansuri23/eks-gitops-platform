@@ -1,0 +1,121 @@
+/* Design tokens. Components read only these; no raw colors elsewhere. */
+:root {
+  /* neutral scale, tinted toward teal-navy */
+  --n-1: #f2f7f7;
+  --n-2: #dce7e8;
+  --n-3: #b9cbcd;
+  --n-4: #8fa6a9;
+  --n-5: #6a8184;
+  --n-6: #4c6063;
+  --n-7: #34464a;
+  --n-8: #222f33;
+  --n-9: #131c1f;
+  --n-10: #0a1114;
+
+  /* brand + accents */
+  --teal: #1fb5a4;
+  --teal-deep: #0e7c70;
+  --teal-bright: #4fd6c6;
+  --amber: #f2a649;
+  --rose: #e26a97;
+  --sky: #5da9e9;
+
+  /* semantic */
+  --success: #2fa36b;
+  --warning: #e0a21b;
+  --error: #e5484d;
+  --info: #3e8ede;
+
+  /* type */
+  --font-display: "Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.5625rem;
+  --fs-2xl: 1.9375rem;
+  --fs-3xl: 2.4375rem;
+  --fs-4xl: 3.0625rem;
+  --fs-5xl: 3.8125rem;
+
+  /* space, radius, motion */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+  --sp-24: 6rem;
+  --sp-32: 8rem;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+  --dur-fast: 150ms;
+  --dur: 250ms;
+  --dur-slow: 400ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* dark theme (default) */
+  color-scheme: dark;
+  --bg: var(--n-10);
+  --bg-raised: #0f181b;
+  --surface: var(--n-9);
+  --surface-2: #1a262a;
+  --border: var(--n-8);
+  --border-strong: var(--n-7);
+  --text: var(--n-1);
+  --text-muted: var(--n-4);
+  --brand: var(--teal);
+  --brand-hover: #35c9b8;
+  --on-brand: #06201d;
+  --brand-text: var(--teal-bright);
+  --focus: var(--teal-bright);
+  --code-bg: #0d1518;
+  --grid-line: rgba(143, 166, 169, 0.08);
+  --mood-opacity: 1;
+  --shadow-card: 0 0 0 1px var(--border), 0 18px 48px -18px rgba(31, 181, 164, 0.22);
+  --shadow-pop: 0 0 0 1px var(--border-strong), 0 28px 80px -24px rgba(31, 181, 164, 0.35);
+  --grad-text: linear-gradient(100deg, #6fe3d4 0%, #7cc0f2 100%);
+  --on-band: #06201d;
+  --nav-bg: rgba(10, 17, 20, 0.72);
+  --err-bg: rgba(229, 72, 77, 0.12);
+  --ok-bg: rgba(47, 163, 107, 0.14);
+  --info-bg: rgba(62, 142, 222, 0.14);
+  --err-text: #ff8b8f;
+  --ok-text: #5fd29a;
+  --info-text: #82bdf3;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* soft sage-grey instead of white, so switching themes doesn't glare */
+  --bg: #e2e8e6;
+  --bg-raised: #e9eeec;
+  --surface: #eef2f0;
+  --surface-2: #dce3e1;
+  --border: #cdd6d4;
+  --border-strong: #b3bfbc;
+  --text: var(--n-10);
+  --text-muted: var(--n-6);
+  --brand-hover: #17a090;
+  --brand-text: #0b6b61;
+  --focus: #0b6b61;
+  --code-bg: #e6ecea;
+  --grid-line: rgba(10, 17, 20, 0.06);
+  --mood-opacity: 0.6;
+  --shadow-card: 0 1px 2px rgba(10, 17, 20, 0.06), 0 16px 36px -16px rgba(10, 17, 20, 0.16);
+  --shadow-pop: 0 2px 4px rgba(10, 17, 20, 0.06), 0 30px 70px -26px rgba(14, 124, 112, 0.4);
+  --grad-text: linear-gradient(100deg, #0e7c70 0%, #2a63a8 100%);
+  --nav-bg: rgba(226, 232, 230, 0.8);
+  --err-bg: #f0dcdc;
+  --ok-bg: #d8ebe0;
+  --info-bg: #d9e5f0;
+  --err-text: #a52a2e;
+  --ok-text: #1b6e47;
+  --info-text: #1f5a96;
+}
