@@ -1,0 +1,705 @@
+{
+  "canvas": {
+    "width": 1680,
+    "height": 1060
+  },
+  "repo": "https://github.com/AfzalMansuri23/eks-gitops-platform/blob/main/",
+  "zones": [
+    {
+      "id": "github",
+      "label": "GitHub · eks-gitops-platform",
+      "x": 270,
+      "y": 50,
+      "w": 760,
+      "h": 320
+    },
+    {
+      "id": "aws",
+      "label": "AWS Cloud · ap-south-1",
+      "x": 1070,
+      "y": 50,
+      "w": 590,
+      "h": 440
+    },
+    {
+      "id": "vpc",
+      "label": "VPC · 10.0.0.0/16",
+      "x": 1350,
+      "y": 90,
+      "w": 290,
+      "h": 380
+    },
+    {
+      "id": "eks",
+      "label": "EKS · private subnets",
+      "x": 1370,
+      "y": 260,
+      "w": 250,
+      "h": 190
+    },
+    {
+      "id": "kind",
+      "label": "kind cluster · lab · local",
+      "x": 270,
+      "y": 540,
+      "w": 1090,
+      "h": 460
+    },
+    {
+      "id": "local",
+      "label": "Local dev · uvicorn :8001",
+      "x": 1400,
+      "y": 540,
+      "w": 260,
+      "h": 460
+    }
+  ],
+  "flows": [
+    {
+      "id": "build",
+      "name": "Build & publish",
+      "color": {
+        "dark": "#5da9e9",
+        "light": "#2a63a8"
+      },
+      "steps": [
+        {
+          "edges": [
+            "b1"
+          ],
+          "text": "An engineer pushes to main."
+        },
+        {
+          "edges": [
+            "b2"
+          ],
+          "text": "Changes under apps/api start the ci workflow. It builds the image and fails on HIGH or CRITICAL CVEs."
+        },
+        {
+          "edges": [
+            "b4"
+          ],
+          "text": "On main, ci pushes the image to ECR, tagged with the commit SHA."
+        },
+        {
+          "edges": [
+            "b3"
+          ],
+          "text": "Changes under charts/ or envs/ start the helm workflow. It lints and renders the chart for dev and prod."
+        },
+        {
+          "edges": [
+            "b5"
+          ],
+          "text": "On main, helm packages the chart and pushes it to ECR as an OCI artifact."
+        }
+      ]
+    },
+    {
+      "id": "gitops",
+      "name": "GitOps deploy",
+      "color": {
+        "dark": "#2fc4b2",
+        "light": "#0b6f64"
+      },
+      "steps": [
+        {
+          "edges": [
+            "g1"
+          ],
+          "text": "Argo CD polls main. Git is the only way changes reach the cluster."
+        },
+        {
+          "edges": [
+            "g2"
+          ],
+          "text": "webapp-dev renders charts/webapp with envs/dev values into gitops-dev."
+        },
+        {
+          "edges": [
+            "g3"
+          ],
+          "text": "webapp-prod renders the same chart with envs/prod values into gitops-prod."
+        },
+        {
+          "edges": [
+            "g4"
+          ],
+          "text": "The api Application applies k8s/api: Deployment, Service, ServiceMonitor, alert rules and dashboard."
+        },
+        {
+          "edges": [
+            "g5"
+          ],
+          "text": "The logging Application applies the Elasticsearch, Kibana and Beat resources. The ECK operator builds them."
+        }
+      ]
+    },
+    {
+      "id": "request",
+      "name": "User request",
+      "color": {
+        "dark": "#f2a649",
+        "light": "#9a5a08"
+      },
+      "steps": [
+        {
+          "edges": [
+            "r1"
+          ],
+          "text": "The browser reaches ingress-nginx through port-forward 8080 with Host gitops-prod.localhost."
+        },
+        {
+          "edges": [
+            "r2"
+          ],
+          "text": "The Ingress rule sends the request to the webapp Service in gitops-prod, which picks one of 3 pods."
+        },
+        {
+          "edges": [
+            "r3"
+          ],
+          "text": "For ExitZero, the browser posts the pasted error to /ask on port 8001."
+        },
+        {
+          "edges": [
+            "r4"
+          ],
+          "text": "ExitZero ranks runbook entries with keyword and embedding search and returns the best match."
+        }
+      ]
+    },
+    {
+      "id": "creds",
+      "name": "Credentials",
+      "color": {
+        "dark": "#e8749f",
+        "light": "#a32f63"
+      },
+      "steps": [
+        {
+          "edges": [
+            "c1"
+          ],
+          "text": "On main, ci and helm trade their GitHub OIDC token for the github-actions-terraform role. The credentials last for one job."
+        },
+        {
+          "edges": [
+            "c2"
+          ],
+          "text": "On pull requests, terraform-plan gets the github-actions-plan role, which is read-only."
+        },
+        {
+          "edges": [
+            "c3",
+            "c4"
+          ],
+          "text": "In the cluster, ECK creates the Elasticsearch credentials and hands them to Filebeat and Kibana. Nobody writes a Secret by hand."
+        }
+      ]
+    },
+    {
+      "id": "metrics",
+      "name": "Metrics & alerts",
+      "color": {
+        "dark": "#a594f5",
+        "light": "#5a43b5"
+      },
+      "steps": [
+        {
+          "edges": [
+            "m1"
+          ],
+          "text": "Prometheus finds the API through its ServiceMonitor, scrapes /metrics every 15s and evaluates 4 alert rules."
+        },
+        {
+          "edges": [
+            "m2"
+          ],
+          "text": "Grafana queries Prometheus. The API dashboard is a ConfigMap the sidecar loads by label."
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "name": "Logs",
+      "color": {
+        "dark": "#6ccb7d",
+        "light": "#2a7a3a"
+      },
+      "steps": [
+        {
+          "edges": [
+            "l1"
+          ],
+          "text": "The API writes one JSON line per event to stdout. Filebeat tails the container log files on the node."
+        },
+        {
+          "edges": [
+            "l2"
+          ],
+          "text": "Filebeat keeps only the api namespace, decodes each line into fields and ships it to Elasticsearch."
+        },
+        {
+          "edges": [
+            "l3"
+          ],
+          "text": "Kibana searches the stored logs by level, logger, pod or message."
+        }
+      ]
+    },
+    {
+      "id": "infra",
+      "name": "Infra provisioning",
+      "color": {
+        "dark": "#a3b4b7",
+        "light": "#4c6063"
+      },
+      "steps": [
+        {
+          "edges": [
+            "i1"
+          ],
+          "text": "A pull request that touches infra/terraform runs terraform-plan."
+        },
+        {
+          "edges": [
+            "i2"
+          ],
+          "text": "The plan reads state from S3 without taking the lock, so it never blocks an apply."
+        },
+        {
+          "edges": [
+            "i3"
+          ],
+          "text": "An engineer applies the network stack from a laptop: VPC, subnets, internet gateway and NAT."
+        },
+        {
+          "edges": [
+            "i4"
+          ],
+          "text": "The eks stack reads the private subnet IDs from network state and creates the cluster there. It is destroyed after each session."
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "dev",
+      "title": "Engineer",
+      "subtitle": "kubectl, terraform",
+      "tag": "DEV",
+      "flow": "build",
+      "x": 40,
+      "y": 110,
+      "description": "Pushes code, applies the AWS stacks with Terraform, and reaches the local cluster with kubectl port-forward.",
+      "facts": [
+        "git push to main",
+        "terraform apply",
+        "kubectl --context kind-lab"
+      ],
+      "source": "README.md"
+    },
+    {
+      "id": "user",
+      "title": "Browser",
+      "subtitle": "localhost",
+      "tag": "WEB",
+      "flow": "request",
+      "x": 40,
+      "y": 800,
+      "description": "Opens the prod webapp through the ingress controller, and ExitZero on port 8001.",
+      "facts": [
+        "port-forward :8080",
+        "gitops-prod.localhost",
+        "localhost:8001"
+      ],
+      "source": "README.md"
+    },
+    {
+      "id": "repo",
+      "title": "Git repo",
+      "subtitle": "main branch",
+      "tag": "GIT",
+      "flow": "gitops",
+      "x": 310,
+      "y": 100,
+      "description": "The source of truth. CI builds from it and Argo CD syncs the cluster from it.",
+      "facts": [
+        "charts/ + envs/",
+        "k8s/api + logging/",
+        "infra/terraform"
+      ],
+      "source": "argocd/applications/api.yaml"
+    },
+    {
+      "id": "ci",
+      "title": "ci workflow",
+      "subtitle": "on apps/api/**",
+      "tag": "CI",
+      "flow": "build",
+      "x": 310,
+      "y": 230,
+      "description": "Builds the API image and fails on HIGH or CRITICAL CVEs. Pushes to ECR on main only.",
+      "facts": [
+        "docker build",
+        "Trivy scan",
+        "tag = git SHA",
+        "push on main only"
+      ],
+      "source": ".github/workflows/ci.yml"
+    },
+    {
+      "id": "helm",
+      "title": "helm workflow",
+      "subtitle": "on charts/, envs/",
+      "tag": "HLM",
+      "flow": "build",
+      "x": 560,
+      "y": 230,
+      "description": "Lints and renders the chart for dev and prod. On main it packages the chart and pushes it to ECR.",
+      "facts": [
+        "helm lint --strict",
+        "dev + prod values",
+        "version 0.1.0-<sha>"
+      ],
+      "source": ".github/workflows/helm.yml"
+    },
+    {
+      "id": "tfplan",
+      "title": "terraform-plan",
+      "subtitle": "on PRs to infra/",
+      "tag": "TF",
+      "flow": "infra",
+      "x": 810,
+      "y": 230,
+      "description": "Runs fmt, validate and plan on pull requests that touch infra/terraform.",
+      "facts": [
+        "fmt -check",
+        "plan -lock=false",
+        "read-only role"
+      ],
+      "source": ".github/workflows/terraform-plan.yml"
+    },
+    {
+      "id": "oidc",
+      "title": "IAM OIDC roles",
+      "subtitle": "GitHub token to STS",
+      "tag": "IAM",
+      "flow": "creds",
+      "x": 1100,
+      "y": 100,
+      "description": "GitHub's OIDC token is exchanged for short-lived AWS credentials, so no AWS keys are stored in GitHub.",
+      "facts": [
+        "terraform role: main only",
+        "plan role: PRs only",
+        "ECR push + state bucket"
+      ],
+      "source": "infra/terraform/bootstrap/github_oidc.tf"
+    },
+    {
+      "id": "ecr",
+      "title": "ECR",
+      "subtitle": "api + charts/webapp",
+      "tag": "ECR",
+      "flow": "build",
+      "x": 1100,
+      "y": 230,
+      "description": "Holds the API image and the packaged chart. The kind cluster does not pull from here yet; the EKS deploy will.",
+      "facts": [
+        "immutable tags",
+        "scan on push",
+        "lifecycle policy"
+      ],
+      "source": "infra/terraform/bootstrap/ecr.tf"
+    },
+    {
+      "id": "s3",
+      "title": "S3 state",
+      "subtitle": "state + lockfile",
+      "tag": "S3",
+      "flow": "infra",
+      "x": 1100,
+      "y": 380,
+      "description": "Terraform state for bootstrap, network and eks, one key per stack, locked with an S3 lockfile.",
+      "facts": [
+        "one key per stack",
+        "use_lockfile",
+        "read by terraform-plan"
+      ],
+      "source": "infra/terraform/network/main.tf"
+    },
+    {
+      "id": "net",
+      "title": "VPC network",
+      "subtitle": "4 subnets · 1 NAT",
+      "tag": "NET",
+      "flow": "infra",
+      "x": 1390,
+      "y": 140,
+      "description": "Two public and two private subnets across ap-south-1a and 1b, an internet gateway, and one NAT gateway for private egress.",
+      "facts": [
+        "10.0.0.0/16",
+        "1 NAT gateway",
+        "kept between sessions"
+      ],
+      "source": "infra/terraform/network/main.tf"
+    },
+    {
+      "id": "eks",
+      "title": "EKS cluster",
+      "subtitle": "2 x t3.small nodes",
+      "tag": "EKS",
+      "flow": "infra",
+      "x": 1390,
+      "y": 330,
+      "description": "Control plane and a managed node group in the private subnets. Created for a lab session, then destroyed to save cost.",
+      "facts": [
+        "private subnets",
+        "public + private endpoint",
+        "created per session"
+      ],
+      "source": "infra/terraform/eks/main.tf"
+    },
+    {
+      "id": "argo",
+      "title": "Argo CD",
+      "subtitle": "ns argocd",
+      "tag": "ARG",
+      "flow": "gitops",
+      "x": 310,
+      "y": 600,
+      "description": "Polls main and applies what Git says. Four Applications, all with automated sync, prune and self-heal.",
+      "facts": [
+        "4 Applications",
+        "prune + self-heal",
+        "chart 10.11.6"
+      ],
+      "source": "argocd/applications/webapp-prod.yaml"
+    },
+    {
+      "id": "ingress",
+      "title": "ingress-nginx",
+      "subtitle": "ns ingress-nginx",
+      "tag": "ING",
+      "flow": "request",
+      "x": 310,
+      "y": 800,
+      "description": "Routes requests by Host header to the prod webapp Service.",
+      "facts": [
+        "class nginx",
+        "host gitops-prod.localhost",
+        "port-forward :8080"
+      ],
+      "source": "charts/webapp/templates/ingress.yaml"
+    },
+    {
+      "id": "wdev",
+      "title": "webapp dev",
+      "subtitle": "ns gitops-dev",
+      "tag": "APP",
+      "flow": "gitops",
+      "x": 580,
+      "y": 600,
+      "description": "The Helm chart with dev values: 2 replicas, debug logging, no Ingress. Reached with port-forward on 8081.",
+      "facts": [
+        "2 replicas",
+        "LOG_LEVEL debug",
+        "no Ingress"
+      ],
+      "source": "envs/dev/values.yaml"
+    },
+    {
+      "id": "api",
+      "title": "Platform API",
+      "subtitle": "ns api · FastAPI",
+      "tag": "API",
+      "flow": "gitops",
+      "x": 580,
+      "y": 700,
+      "description": "Small FastAPI service with /health and /metrics. Logs JSON to stdout. On kind it runs a locally loaded image.",
+      "facts": [
+        "2 replicas",
+        "/health + /metrics",
+        "JSON logs",
+        "image api:local"
+      ],
+      "source": "k8s/api/deployment.yaml"
+    },
+    {
+      "id": "wprod",
+      "title": "webapp prod",
+      "subtitle": "ns gitops-prod",
+      "tag": "APP",
+      "flow": "request",
+      "x": 580,
+      "y": 800,
+      "description": "The same chart with prod values: 3 replicas, resource limits and an Ingress.",
+      "facts": [
+        "3 replicas",
+        "limits 300m / 128Mi",
+        "Ingress on"
+      ],
+      "source": "envs/prod/values.yaml"
+    },
+    {
+      "id": "grafana",
+      "title": "Grafana",
+      "subtitle": "ns monitoring",
+      "tag": "GRF",
+      "flow": "metrics",
+      "x": 850,
+      "y": 600,
+      "description": "Dashboards query Prometheus. The API dashboard is a ConfigMap that the sidecar picks up by label.",
+      "facts": [
+        "label grafana_dashboard=1",
+        "sidecar watches all ns",
+        "p50 / p95 / p99"
+      ],
+      "source": "k8s/api/dashboard.yaml"
+    },
+    {
+      "id": "prom",
+      "title": "Prometheus",
+      "subtitle": "ns monitoring",
+      "tag": "PRM",
+      "flow": "metrics",
+      "x": 850,
+      "y": 700,
+      "description": "Finds the API through its ServiceMonitor, scrapes /metrics every 15s and evaluates 4 alert rules.",
+      "facts": [
+        "15s scrape",
+        "4 alert rules",
+        "2d retention",
+        "Alertmanager off"
+      ],
+      "source": "monitoring/kube-prometheus-stack-values.yaml"
+    },
+    {
+      "id": "filebeat",
+      "title": "Filebeat",
+      "subtitle": "ns logging · per node",
+      "tag": "FB",
+      "flow": "logs",
+      "x": 850,
+      "y": 800,
+      "description": "Tails container logs on each node, keeps only the api namespace, and decodes each JSON line into fields.",
+      "facts": [
+        "api ns only",
+        "JSON decoded",
+        "pod + node metadata"
+      ],
+      "source": "logging/filebeat.yaml"
+    },
+    {
+      "id": "es",
+      "title": "Elasticsearch",
+      "subtitle": "ns logging · 1 node",
+      "tag": "ES",
+      "flow": "logs",
+      "x": 850,
+      "y": 900,
+      "description": "Stores the API logs. It has one node, so health is yellow: replica shards have nowhere to go.",
+      "facts": [
+        "version 9.5.5",
+        "1 node",
+        "yellow is expected"
+      ],
+      "source": "logging/elasticsearch.yaml"
+    },
+    {
+      "id": "eck",
+      "title": "ECK operator",
+      "subtitle": "ns logging · CRs",
+      "tag": "ECK",
+      "flow": "creds",
+      "x": 1120,
+      "y": 800,
+      "description": "Turns the Elasticsearch, Kibana and Beat resources into pods, and creates the credentials they use to talk to each other.",
+      "facts": [
+        "installed with Helm",
+        "elasticsearchRef",
+        "no hand-made Secrets"
+      ],
+      "source": "logging/filebeat.yaml"
+    },
+    {
+      "id": "kibana",
+      "title": "Kibana",
+      "subtitle": "ns logging",
+      "tag": "KB",
+      "flow": "logs",
+      "x": 1120,
+      "y": 900,
+      "description": "Search and filter the API logs by level, logger, pod or message.",
+      "facts": [
+        "KQL",
+        "Discover",
+        "404-spike runbook"
+      ],
+      "source": "logging/kibana.yaml"
+    },
+    {
+      "id": "runbooks",
+      "title": "Runbooks",
+      "subtitle": "knowledge/*.md",
+      "tag": "MD",
+      "flow": "request",
+      "x": 1430,
+      "y": 640,
+      "description": "248 entries across 46 tools. Each lists the exact error strings, the cause, the fix and the commands to run.",
+      "facts": [
+        "248 entries",
+        "46 tools",
+        "vectors cached on disk"
+      ],
+      "source": "apps/assistant/knowledge/kubernetes.md"
+    },
+    {
+      "id": "exitzero",
+      "title": "ExitZero",
+      "subtitle": "FastAPI · local only",
+      "tag": "EZ",
+      "flow": "request",
+      "x": 1430,
+      "y": 800,
+      "description": "Paste an error, get the matching runbook: cause, fix and commands. Runs locally with uvicorn for now.",
+      "facts": [
+        "hybrid retrieval",
+        "MiniLM on CPU",
+        "/metrics + JSON logs",
+        "rate limited"
+      ],
+      "source": "apps/assistant/app/main.py"
+    }
+  ],
+  "edges": [
+    {"id": "b1", "from": "dev", "to": "repo", "flow": "build", "path": [[240, 130], [310, 130]]},
+    {"id": "b2", "from": "repo", "to": "ci", "flow": "build", "path": [[410, 160], [410, 230]]},
+    {"id": "b3", "from": "repo", "to": "helm", "flow": "build", "path": [[510, 150], [580, 150], [580, 230]]},
+    {"id": "b4", "from": "ci", "to": "ecr", "flow": "build", "path": [[490, 290], [490, 320], [1120, 320], [1120, 290]]},
+    {"id": "b5", "from": "helm", "to": "ecr", "flow": "build", "path": [[740, 230], [740, 200], [1120, 200], [1120, 230]]},
+    {"id": "g1", "from": "repo", "to": "argo", "flow": "gitops", "path": [[310, 150], [260, 150], [260, 610], [310, 610]]},
+    {"id": "g2", "from": "argo", "to": "wdev", "flow": "gitops", "path": [[510, 630], [580, 630]]},
+    {"id": "g3", "from": "argo", "to": "wprod", "flow": "gitops", "path": [[510, 650], [550, 650], [550, 810], [580, 810]]},
+    {"id": "g4", "from": "argo", "to": "api", "flow": "gitops", "path": [[490, 660], [490, 710], [580, 710]]},
+    {"id": "g5", "from": "argo", "to": "eck", "flow": "gitops", "path": [[490, 600], [490, 580], [1140, 580], [1140, 800]]},
+    {"id": "r1", "from": "user", "to": "ingress", "flow": "request", "path": [[240, 830], [310, 830]]},
+    {"id": "r2", "from": "ingress", "to": "wprod", "flow": "request", "path": [[510, 830], [580, 830]]},
+    {"id": "r3", "from": "user", "to": "exitzero", "flow": "request", "path": [[220, 860], [220, 1010], [1450, 1010], [1450, 860]]},
+    {"id": "r4", "from": "exitzero", "to": "runbooks", "flow": "request", "path": [[1530, 800], [1530, 700]]},
+    {"id": "c1", "from": "ci", "to": "oidc", "flow": "creds", "path": [[510, 240], [540, 240], [540, 110], [1100, 110]]},
+    {"id": "c2", "from": "tfplan", "to": "oidc", "flow": "creds", "path": [[990, 230], [990, 150], [1100, 150]]},
+    {"id": "c3", "from": "eck", "to": "filebeat", "flow": "creds", "path": [[1120, 830], [1050, 830]]},
+    {"id": "c4", "from": "eck", "to": "kibana", "flow": "creds", "path": [[1220, 860], [1220, 900]]},
+    {"id": "m1", "from": "api", "to": "prom", "flow": "metrics", "path": [[780, 730], [850, 730]]},
+    {"id": "m2", "from": "prom", "to": "grafana", "flow": "metrics", "path": [[950, 700], [950, 660]]},
+    {"id": "l1", "from": "api", "to": "filebeat", "flow": "logs", "path": [[780, 750], [820, 750], [820, 810], [850, 810]]},
+    {"id": "l2", "from": "filebeat", "to": "es", "flow": "logs", "path": [[950, 860], [950, 900]]},
+    {"id": "l3", "from": "es", "to": "kibana", "flow": "logs", "path": [[1050, 930], [1120, 930]]},
+    {"id": "i1", "from": "repo", "to": "tfplan", "flow": "infra", "path": [[510, 130], [830, 130], [830, 230]]},
+    {"id": "i2", "from": "tfplan", "to": "s3", "flow": "infra", "path": [[990, 290], [990, 390], [1100, 390]]},
+    {"id": "i3", "from": "dev", "to": "net", "flow": "infra", "path": [[220, 110], [220, 40], [1340, 40], [1340, 150], [1390, 150]]},
+    {"id": "i4", "from": "net", "to": "eks", "flow": "infra", "path": [[1560, 200], [1560, 330]]}
+  ]
+}
