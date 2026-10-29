@@ -5,10 +5,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import kb
+from . import kb, retrieval
 
 BASE = Path(__file__).parent
 PAGES = BASE / "pages"
+
+RETRIEVER = retrieval.make_retriever()
 
 app = FastAPI(title="ExitZero")
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
@@ -32,6 +34,7 @@ class AskResponse(BaseModel):
     related: list[str] = []
     sources: list[Source] = []
     backend: str
+    score: float | None = None
 
 
 @app.get("/health")
@@ -61,17 +64,18 @@ def access():
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):
-    hits = kb.search(req.error)
+    hits = RETRIEVER.search(req.error, 3)
     if not hits:
-        return AskResponse(found=False, backend="keyword-demo")
-    best = hits[0]
+        return AskResponse(found=False, backend=RETRIEVER.name)
+    best, score = hits[0]
     return AskResponse(
         found=True,
         tool=best.tool,
         cause=best.cause,
         fix=best.fix,
         commands=list(best.commands),
-        related=[h.title for h in hits[1:]],
-        sources=[Source(title=h.source, snippet=h.title) for h in hits],
-        backend="keyword-demo",
+        related=[h.title for h, _ in hits[1:]],
+        sources=[Source(title=h.source, snippet=h.title) for h, _ in hits],
+        backend=RETRIEVER.name,
+        score=score,
     )
