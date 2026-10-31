@@ -60,7 +60,9 @@
       dark.push("--flow-" + f.id + ":" + f.color.dark);
       light.push("--flow-" + f.id + ":" + f.color.light);
     });
-    var style = document.createElement("style");
+    // one element, replaced on every mount, so switching views does not pile up rules
+    var style = document.getElementById("arch-flow-colors") || document.createElement("style");
+    style.id = "arch-flow-colors";
     style.textContent =
       scope + "{" + dark.join(";") + "}" + ':root[data-theme="light"] ' + scope + "{" + light.join(";") + "}";
     document.head.appendChild(style);
@@ -111,7 +113,7 @@
     var edgeEls = {};
     cfg.edges.forEach(function (e) {
       var d = roundedPath(e.path, 8);
-      var g = svg("g", { class: "edge", "data-flow": e.flow, style: "--c:var(--flow-" + e.flow + ")" }, gEdges);
+      var g = svg("g", { class: "edge" + (e.status === "planned" ? " is-planned" : ""), "data-flow": e.flow, style: "--c:var(--flow-" + e.flow + ")" }, gEdges);
       svg("path", { class: "edge-track", d: d }, g);
       svg("path", { class: "edge-line", d: d, id: "arch-edge-" + e.id, "marker-end": "url(#arch-arrow-" + e.flow + ")" }, g);
       var len = pathLength(e.path);
@@ -131,7 +133,7 @@
     var nodeEls = {};
     cfg.nodes.forEach(function (n) {
       var g = svg("g", {
-        class: "node", transform: "translate(" + n.x + "," + n.y + ")", tabindex: "0", role: "button",
+        class: "node" + (n.status === "planned" ? " is-planned" : ""), transform: "translate(" + n.x + "," + n.y + ")", tabindex: "0", role: "button",
         "aria-label": n.title + ", " + n.subtitle + ". Show details", style: "--c:var(--flow-" + n.flow + ")"
       }, gNodes);
       svg("rect", { class: "node-box", width: NODE_W, height: NODE_H, rx: 10 }, g);
@@ -195,6 +197,13 @@
             onE[e.id] = true;
             onN[e.from] = onN[e.to] = true;
           }
+        });
+        // a flow's steps may also walk edges drawn in another flow's colour
+        flows[state.flow].steps.forEach(function (st) {
+          st.edges.forEach(function (id) {
+            onE[id] = true;
+            onN[edges[id].from] = onN[edges[id].to] = true;
+          });
         });
         var step = flows[state.flow].steps[state.step];
         step.edges.forEach(function (id) {
@@ -347,5 +356,33 @@
     selectFlow(null);
   }
 
-  window.ArchDiagram = { mount: mount };
+  // several configs on one page: a switch above the diagram, the choice kept in the URL hash
+  function mountViews(root, views) {
+    var bar = html("div", "arch-views");
+    bar.setAttribute("role", "tablist");
+    bar.setAttribute("aria-label", "Diagram view");
+    var holder = html("div", null);
+    root.append(bar, holder);
+    var buttons = views.map(function (v, i) {
+      var b = html("button", "arch-view", bar, v.label);
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.addEventListener("click", function () { show(i, true); });
+      return b;
+    });
+    html("span", "arch-views-key", bar, "Dashed: in the plan, not in the code yet");
+
+    function show(i, push) {
+      buttons.forEach(function (b, j) { b.setAttribute("aria-selected", String(i === j)); });
+      var fresh = html("div", null);
+      holder.replaceWith(fresh);
+      holder = fresh;
+      mount(holder, views[i].config);
+      if (push) history.replaceState(null, "", "#" + views[i].id);
+    }
+    var start = views.findIndex(function (v) { return "#" + v.id === location.hash; });
+    show(start < 0 ? 0 : start, false);
+  }
+
+  window.ArchDiagram = { mount: mount, mountViews: mountViews };
 })();
