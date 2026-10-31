@@ -13,6 +13,8 @@ crash.log
 #tfvars can hold secrets; commit only the example
 *.tfvars
 !*.tfvars.example
+#backend config holds the account-specific state bucket; commit only the example
+backend.hcl
 
 #----------- Secrets -------------
 *.pem
