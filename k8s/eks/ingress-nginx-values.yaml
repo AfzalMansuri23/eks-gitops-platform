@@ -1,0 +1,16 @@
+# ingress-nginx on EKS. Installed by scripts/eks-up.ps1, which adds
+# controller.service.loadBalancerSourceRanges=[<your-ip>/32] so only you can reach it.
+controller:
+  service:
+    type: LoadBalancer
+    annotations:
+      # Network Load Balancer created by the in-tree AWS cloud provider
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    # keep the client IP, so the per-IP rate limit sees real users, not the load balancer
+    externalTrafficPolicy: Local
+  config:
+    use-forwarded-headers: "false"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi

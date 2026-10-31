@@ -1,0 +1,91 @@
+name: assistant
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/assistant/**"
+      - ".github/workflows/assistant.yml"
+  pull_request:
+    paths:
+      - "apps/assistant/**"
+      - ".github/workflows/assistant.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+defaults:
+  run:
+    working-directory: apps/assistant
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # the embedding model is cached between runs instead of downloaded each time
+      FASTEMBED_CACHE_PATH: ${{ github.workspace }}/.cache/models
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: apps/assistant/requirements*.txt
+
+      - uses: actions/cache@v4
+        with:
+          path: .cache/models
+          key: fastembed-minilm-v1
+
+      - name: Install
+        run: pip install -r requirements-dev.txt
+
+      # Claude is faked in the tests, so no API key and no cost
+      - name: Tests
+        run: python -m pytest -q
+
+      - name: Retrieval eval
+        run: python -m tests.eval.run_eval
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t assistant:${{ github.sha }} .
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: assistant:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          # the anthropic SDK's docstrings contain a masked example credential
+          # that the secret scanner reports as a GCP key; our own code is still scanned
+          skip-dirs: /opt/venv/lib/python3.13/site-packages/anthropic
+
+      # AWS steps run on main only; the IAM role trusts refs/heads/main only
+      - name: Configure AWS credentials
+        if: github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Login to ECR
+        if: github.ref == 'refs/heads/main'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push
+        if: github.ref == 'refs/heads/main'
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/eks-gitops-platform/assistant:${{ github.sha }}
+          docker tag assistant:${{ github.sha }} $IMAGE
+          docker push $IMAGE

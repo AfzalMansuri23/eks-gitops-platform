@@ -16,3 +16,8 @@ variable "ecr_chart_repository_name" {
   type    = string
   default = "eks-gitops-platform/charts/webapp"
 }
+
+variable "ecr_assistant_repository_name" {
+  type    = string
+  default = "eks-gitops-platform/assistant"
+}

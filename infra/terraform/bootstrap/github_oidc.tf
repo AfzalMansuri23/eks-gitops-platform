@@ -53,7 +53,8 @@ data "aws_iam_policy_document" "github_permissions" {
     ]
     resources = [
       aws_ecr_repository.api.arn,
-      aws_ecr_repository.chart.arn
+      aws_ecr_repository.chart.arn,
+      aws_ecr_repository.assistant.arn,
     ]
   }
 
