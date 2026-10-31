@@ -299,3 +299,18 @@ textarea:focus-visible {
   background: var(--err-bg);
   color: var(--err-text);
 }
+
+/* keyboard keys in the send hint, drawn as key caps */
+.hint kbd {
+  display: inline-block;
+  min-width: 1.6rem;
+  padding: 0.1rem 0.45rem;
+  margin: 0 0.1rem;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: 600 0.75rem / 1.5 var(--font-body);
+  text-align: center;
+}
