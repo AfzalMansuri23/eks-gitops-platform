@@ -26,3 +26,25 @@ terraform apply            # state_bucket comes from terraform.tfvars
 ```
 
 An existing checkout that was initialized before the bucket moved out of the code needs `terraform init -reconfigure -backend-config=../backend.hcl` once.
+
+## EKS lab day
+
+```powershell
+.\scripts\eks-up.ps1      # network + EKS + ingress-nginx, locked to your current IP
+# ... demo ...
+.\scripts\eks-down.ps1    # same day: removes k8s-made load balancers and volumes first, then destroys
+.\scripts\aws-check.ps1   # read-only: exits 1 if anything billable is left
+```
+
+| Safeguard | Where |
+|---|---|
+| EKS API endpoint only reachable from your IP (`admin_cidrs`, never `0.0.0.0/0`) | `eks/main.tf` |
+| Load balancer only reachable from your IP (`loadBalancerSourceRanges`) | `scripts/eks-up.ps1`, `k8s/eks/ingress-nginx-values.yaml` |
+| NetworkPolicies enforced: managed VPC CNI with `enableNetworkPolicy` (EKS ignores them otherwise) | `eks/main.tf` |
+| Pods cannot use the node's IAM role: IMDSv2 required, hop limit 1 | `eks/main.tf` (launch template) |
+| Node type limited to free-tier-eligible types (`t3.medium` is not; default `c7i-flex.large`, 4 GiB) | `eks/main.tf` |
+| Teardown order: LoadBalancer Services and PVCs deleted and waited for before `terraform destroy` | `scripts/eks-down.ps1` |
+| ExitZero image scanned by Trivy (HIGH/CRITICAL) before it is pushed to ECR | `.github/workflows/assistant.yml` |
+| Agent mode key: a separate, spend-limited key in `EXITZERO_EKS_ANTHROPIC_KEY`, piped into a Secret, deleted after the demo | `scripts/eks-up.ps1` |
+
+Cost while up: about $0.27 per hour (control plane, 2 nodes, NAT, NLB). Before the first EKS day, apply `bootstrap` once so the `eks-gitops-platform/assistant` ECR repository exists.
