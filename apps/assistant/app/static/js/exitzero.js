@@ -108,10 +108,26 @@ window.ExitZero = (function () {
       if (data.commands.length) {
         var cmds = el("div", "cmds");
         cmds.append(el("h3", null, "Run this"));
-        data.commands.forEach(function (c) {
+        var risks = data.command_risks || [];
+        var notes = {
+          destructive: "Changes or deletes things. Read it before you run it.",
+          sensitive: "Prints a secret. Don't paste the output anywhere."
+        };
+        data.commands.forEach(function (c, i) {
+          var risk = risks[i];
+          if (notes[risk]) {
+            var warn = el("p", "cmd-risk cmd-risk-" + risk);
+            warn.append(icon("triangle-alert"), el("span", null, notes[risk]));
+            cmds.append(warn);
+          }
           cmds.append(commandButton(c));
         });
         target.append(cmds);
+      }
+      if (data.blocked) {
+        var gone = el("p", "cmd-risk cmd-risk-blocked");
+        gone.append(icon("shield-alert"), el("span", null, data.blocked + (data.blocked === 1 ? " unsafe command was" : " unsafe commands were") + " removed by the safety check."));
+        target.append(gone);
       }
       if (data.related.length) {
         target.append(el("p", "related", "Also similar: " + data.related.join("; ")));

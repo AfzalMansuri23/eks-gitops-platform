@@ -14,8 +14,9 @@ import anthropic
 
 from . import kb, retrieval
 from .agent import AgentError, make_agent
+from .guard import check_answer, injection_signals
 from .observability import (
-    ASKS, LLM_REQUESTS, LLM_SECONDS, LLM_TOKENS, LLM_TOOL_CALLS, REDACTIONS, RETRIEVAL_SECONDS, fingerprint, log,
+    ASKS, GUARD_BLOCKED, GUARD_FLAGGED, INJECTION, LLM_REQUESTS, LLM_SECONDS, LLM_TOKENS, LLM_TOOL_CALLS, REDACTIONS, RETRIEVAL_SECONDS, fingerprint, log,
 )
 from .redact import redact
 from .security import SecurityMiddleware, rate_limit
@@ -79,7 +80,9 @@ class AskResponse(BaseModel):
     backend: str
     score: float | None = None
     grounded: bool | None = None  # agent only: answer backed by a runbook
-    redactions: int = 0  # secrets removed before the error was sent to the LLM
+    redactions: int = 0  # secrets removed before the error was sent to the LLM, or from the answer
+    command_risks: list[str] = []  # one per command: safe, sensitive or destructive
+    blocked: int = 0  # unsafe commands removed by the safety filter
 
 
 @app.get("/health")
@@ -122,6 +125,7 @@ def ask(req: AskRequest):
     answer = ask_agent(req.error, hits) if AGENT is not None else None
     if answer is None:
         answer = from_retrieval(hits)
+    answer = guarded(answer)
 
     ASKS.labels("found" if answer.found else "miss", answer.tool or "none").inc()
     log.info(
@@ -132,10 +136,31 @@ def ask(req: AskRequest):
             "tool": answer.tool,
             "score": answer.score,
             "backend": answer.backend,
+            "blocked": answer.blocked,
             "retrieval_ms": round(elapsed * 1000, 2),
         },
     )
     return answer
+
+
+def guarded(answer: AskResponse) -> AskResponse:
+    """Last stop before the browser: drop unsafe commands, flag risky ones, scrub secrets."""
+    if not answer.found:
+        return answer
+    checked = check_answer(answer.cause, answer.fix, answer.commands)
+    for reason in checked.blocked:
+        GUARD_BLOCKED.labels(reason).inc()
+    for risk in checked.risks:
+        if risk != "safe":
+            GUARD_FLAGGED.labels(risk).inc()
+    return answer.model_copy(update={
+        "cause": checked.cause,
+        "fix": checked.fix,
+        "commands": checked.commands,
+        "command_risks": checked.risks,
+        "blocked": len(checked.blocked),
+        "redactions": answer.redactions + checked.redactions,
+    })
 
 
 def from_retrieval(hits) -> AskResponse:
@@ -159,6 +184,9 @@ def ask_agent(error: str, hits) -> AskResponse | None:
     """Run the agent on the redacted error. None means: use the retrieval answer."""
     clean, redactions = redact(error)
     REDACTIONS.inc(redactions)
+    signals = injection_signals(error)
+    for kind in signals:
+        INJECTION.labels(kind).inc()
     start = time.perf_counter()
     try:
         result = AGENT.ask(clean, [e for e, _ in hits])
@@ -171,6 +199,7 @@ def ask_agent(error: str, hits) -> AskResponse | None:
     LLM_SECONDS.observe(seconds)
     LLM_REQUESTS.labels(outcome).inc()
     log.info("agent", extra={"outcome": outcome, "llm_ms": round(seconds * 1000), "redactions": redactions,
+                             "injection_signals": signals,
                              **({"model": result.model, "tool_calls": result.tool_calls, **result.usage} if result else {})})
     if result is None:
         return None

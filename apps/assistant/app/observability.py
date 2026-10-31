@@ -45,6 +45,9 @@ LLM_SECONDS = Histogram(
 )
 LLM_TOKENS = Counter("exitzero_llm_tokens_total", "Tokens used by the agent", ["kind"])
 LLM_TOOL_CALLS = Counter("exitzero_llm_tool_calls_total", "Runbook tool calls made by the agent", ["tool"])
+GUARD_BLOCKED = Counter("exitzero_guard_blocked_total", "Commands removed from answers by the safety filter", ["reason"])
+GUARD_FLAGGED = Counter("exitzero_guard_flagged_total", "Commands kept but flagged in answers", ["risk"])
+INJECTION = Counter("exitzero_injection_suspected_total", "Pasted errors that look like prompt-injection attempts", ["kind"])
 REDACTIONS = Counter("exitzero_redactions_total", "Secrets removed from pasted errors before they left the process")
 
 _HASH_KEY = os.getenv("LOG_HASH_KEY", "").encode() or secrets.token_bytes(16)
