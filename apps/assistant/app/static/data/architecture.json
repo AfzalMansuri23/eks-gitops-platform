@@ -27,7 +27,8 @@
       "x": 1350,
       "y": 90,
       "w": 290,
-      "h": 380
+      "h": 380,
+      "detail": true
     },
     {
       "id": "eks",
@@ -35,7 +36,8 @@
       "x": 1370,
       "y": 260,
       "w": 250,
-      "h": 190
+      "h": 190,
+      "detail": true
     },
     {
       "id": "kind",
@@ -386,7 +388,8 @@
         "plan -lock=false",
         "read-only role"
       ],
-      "source": ".github/workflows/terraform-plan.yml"
+      "source": ".github/workflows/terraform-plan.yml",
+      "detail": true
     },
     {
       "id": "oidc",
@@ -402,7 +405,8 @@
         "plan role: PRs only",
         "ECR push + state bucket"
       ],
-      "source": "infra/terraform/bootstrap/github_oidc.tf"
+      "source": "infra/terraform/bootstrap/github_oidc.tf",
+      "detail": true
     },
     {
       "id": "ecr",
@@ -434,7 +438,8 @@
         "use_lockfile",
         "read by terraform-plan"
       ],
-      "source": "infra/terraform/network/main.tf"
+      "source": "infra/terraform/network/main.tf",
+      "detail": true
     },
     {
       "id": "net",
@@ -450,7 +455,8 @@
         "1 NAT gateway",
         "destroyed by eks-down"
       ],
-      "source": "infra/terraform/network/main.tf"
+      "source": "infra/terraform/network/main.tf",
+      "detail": true
     },
     {
       "id": "eks",
@@ -467,7 +473,8 @@
         "network policies enforced",
         "created per session"
       ],
-      "source": "infra/terraform/eks/main.tf"
+      "source": "infra/terraform/eks/main.tf",
+      "detail": true
     },
     {
       "id": "argo",
@@ -710,7 +717,7 @@
     {"id": "g5", "from": "argo", "to": "eck", "flow": "gitops", "path": [[470, 660], [470, 780], [1090, 780], [1090, 810], [1120, 810]]},
     {"id": "r1", "from": "user", "to": "ingress", "flow": "request", "path": [[240, 830], [310, 830]]},
     {"id": "r2", "from": "ingress", "to": "wprod", "flow": "request", "path": [[510, 830], [580, 830]]},
-    {"id": "r3", "from": "user", "to": "exitzero", "flow": "request", "path": [[220, 860], [220, 1010], [1450, 1010], [1450, 860]]},
+    {"id": "r3", "from": "user", "to": "exitzero", "flow": "request", "flowOnly": true, "path": [[220, 860], [220, 1010], [1450, 1010], [1450, 860]]},
     {"id": "r4", "from": "exitzero", "to": "runbooks", "flow": "request", "path": [[1530, 800], [1530, 700]]},
     {"id": "c1", "from": "ci", "to": "oidc", "flow": "creds", "path": [[490, 230], [490, 180], [970, 180], [970, 130], [1100, 130]]},
     {"id": "c2", "from": "tfplan", "to": "oidc", "flow": "creds", "path": [[990, 230], [990, 150], [1100, 150]]},
@@ -723,7 +730,7 @@
     {"id": "l3", "from": "es", "to": "kibana", "flow": "logs", "path": [[1050, 930], [1120, 930]]},
     {"id": "i1", "from": "repo", "to": "tfplan", "flow": "infra", "path": [[510, 110], [830, 110], [830, 230]]},
     {"id": "i2", "from": "tfplan", "to": "s3", "flow": "infra", "path": [[990, 290], [990, 390], [1100, 390]]},
-    {"id": "i3", "from": "dev", "to": "net", "flow": "infra", "path": [[220, 110], [220, 40], [1340, 40], [1340, 150], [1390, 150]]},
+    {"id": "i3", "from": "dev", "to": "net", "flow": "infra", "flowOnly": true, "path": [[220, 110], [220, 40], [1340, 40], [1340, 150], [1390, 150]]},
     {"id": "i4", "from": "net", "to": "eks", "flow": "infra", "path": [[1560, 200], [1560, 330]]},
     {"id": "b6", "from": "repo", "to": "acii", "flow": "build", "path": [[310, 150], [280, 150], [280, 350], [310, 350]]},
     {"id": "b7", "from": "acii", "to": "ecr", "flow": "build", "path": [[510, 350], [1140, 350], [1140, 290]]}

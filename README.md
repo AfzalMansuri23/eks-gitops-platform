@@ -64,7 +64,7 @@ Open the AWS view directly with `#aws` on the page URL.
 
 Pick a flow to play it hop by hop, hover a component to see what it talks to, click it for details and its source file.
 
-**Updating it:** all content lives in [`architecture.json`](apps/assistant/app/static/data/architecture.json) (kind view) and [`architecture-eks.json`](apps/assistant/app/static/data/architecture-eks.json) (AWS view): zones, nodes, edges, flows and their steps. A node or edge with `"status": "planned"` is drawn dashed. After moving or adding nodes, reroute the edges and regenerate the standalone page:
+**Updating it:** all content lives in [`architecture.json`](apps/assistant/app/static/data/architecture.json) (kind view) and [`architecture-eks.json`](apps/assistant/app/static/data/architecture-eks.json) (AWS view): zones, nodes, edges, flows and their steps. A node or edge with `"status": "planned"` is drawn dashed; `"detail": true` on a node or zone hides it until "Show details" is on or a flow uses it; `"flowOnly": true` on an edge shows it only while its flow plays. After moving or adding nodes, reroute the edges and regenerate the standalone page:
 
 ```sh
 cd apps/assistant

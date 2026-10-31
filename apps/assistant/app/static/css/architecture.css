@@ -399,3 +399,35 @@
 .edge.is-planned .edge-line {
   stroke-dasharray: 2 5;
 }
+
+/* calm overview: no flow picked, nothing hovered */
+.arch-svg.is-overview .edge-line {
+  stroke: var(--arch-quiet);
+  stroke-width: 1.4;
+  stroke-dasharray: none;
+  animation: none;
+  opacity: 1;
+  marker-end: url(#arch-arrow-muted);
+}
+.arch-svg.is-overview .edge.is-planned .edge-line {
+  stroke-dasharray: 2 5;
+}
+.arch-svg.is-overview .packet {
+  display: none;
+}
+.arch-arrow-muted {
+  fill: var(--arch-quiet);
+}
+.arch {
+  --arch-quiet: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+/* detail cards and flow-only lines, hidden until needed */
+.zone.is-hidden,
+.node.is-hidden,
+.edge.is-hidden {
+  display: none;
+}
+.arch-details {
+  margin-left: auto;
+}

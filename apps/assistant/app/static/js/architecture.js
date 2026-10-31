@@ -99,16 +99,30 @@
       }, defs);
       svg("path", { d: "M0,1 L9,5 L0,9 z", style: "fill:var(--flow-" + f.id + ")" }, m);
     });
+    // grey arrowhead for the calm overview (no flow picked)
+    var muted = svg("marker", {
+      id: "arch-arrow-muted", viewBox: "0 0 10 10", refX: "9", refY: "5",
+      markerWidth: "8", markerHeight: "8", markerUnits: "userSpaceOnUse", orient: "auto"
+    }, defs);
+    svg("path", { d: "M0,1 L9,5 L0,9 z", class: "arch-arrow-muted" }, muted);
 
     var gZones = svg("g", { class: "arch-zones" }, s);
     var gEdges = svg("g", { class: "arch-edges" }, s);
     var gNodes = svg("g", { class: "arch-nodes" }, s);
 
+    var zoneEls = [];
     cfg.zones.forEach(function (z) {
-      svg("rect", { class: "zone-box", x: z.x, y: z.y, width: z.w, height: z.h, rx: 14 }, gZones);
-      var t = svg("text", { class: "zone-label", x: z.x + 14, y: z.y + 20 }, gZones);
+      var g = svg("g", { class: "zone" }, gZones);
+      svg("rect", { class: "zone-box", x: z.x, y: z.y, width: z.w, height: z.h, rx: 14 }, g);
+      var t = svg("text", { class: "zone-label", x: z.x + 14, y: z.y + 20 }, g);
       t.textContent = z.label.toUpperCase();
+      zoneEls.push({ z: z, g: g });
     });
+
+    function inside(z, n) {
+      var cx = n.x + NODE_W / 2, cy = n.y + NODE_H / 2;
+      return cx > z.x && cx < z.x + z.w && cy > z.y && cy < z.y + z.h;
+    }
 
     var edgeEls = {};
     cfg.edges.forEach(function (e) {
@@ -170,7 +184,7 @@
     });
 
     // ---- state
-    var state = { flow: null, step: 0, playing: !reduced, hover: null, timer: null };
+    var state = { flow: null, step: 0, playing: !reduced, hover: null, timer: null, details: false };
 
     function flowsOfNode(id) {
       var out = [nodes[id].flow];
@@ -212,14 +226,30 @@
         });
       }
       s.classList.toggle("has-focus", !!focus);
+      // calm overview: grey, still lines until a flow is picked or a card hovered
+      s.classList.toggle("is-overview", !focus);
+      // detail cards stay hidden unless asked for, or used by the flow or hover in view
+      var hidden = {};
+      cfg.nodes.forEach(function (n) {
+        hidden[n.id] = !!n.detail && !state.details && !onN[n.id];
+      });
       for (var id in edgeEls) {
+        var e = edges[id];
         edgeEls[id].classList.toggle("on", !!onE[id]);
         edgeEls[id].classList.toggle("active", !!active[id] && !state.hover);
+        // flow-only edges (long lab-day lines) show only while their flow or a hover uses them
+        edgeEls[id].classList.toggle("is-hidden", (!!e.flowOnly && !onE[id]) || hidden[e.from] || hidden[e.to]);
       }
       for (var nid in nodeEls) {
         nodeEls[nid].classList.toggle("on", !!onN[nid]);
         nodeEls[nid].classList.toggle("lit", !!lit[nid] && !state.hover);
+        nodeEls[nid].classList.toggle("is-hidden", hidden[nid]);
       }
+      // a detail zone shows once anything inside it is visible
+      zoneEls.forEach(function (ze) {
+        var show = !ze.z.detail || cfg.nodes.some(function (n) { return inside(ze.z, n) && !hidden[n.id]; });
+        ze.g.classList.toggle("is-hidden", !show);
+      });
     }
 
     function hover(id) {
@@ -244,10 +274,22 @@
     chip("All flows", null);
     cfg.flows.forEach(function (f) { chip(f.name, f.id); });
 
+    if (cfg.nodes.some(function (n) { return n.detail; })) {
+      var more = html("button", "arch-chip arch-details", chips, "Show details");
+      more.type = "button";
+      more.setAttribute("aria-pressed", "false");
+      more.addEventListener("click", function () {
+        state.details = !state.details;
+        more.setAttribute("aria-pressed", String(state.details));
+        more.textContent = state.details ? "Hide details" : "Show details";
+        paint();
+      });
+    }
+
     function selectFlow(id) {
       state.flow = id;
       state.step = 0;
-      chips.querySelectorAll(".arch-chip").forEach(function (b) {
+      chips.querySelectorAll(".arch-chip[data-flow]").forEach(function (b) {
         b.setAttribute("aria-pressed", String(b.dataset.flow === (id || "")));
       });
       renderSteps();
