@@ -273,3 +273,29 @@ textarea:focus-visible {
 [hidden] {
   display: none !important;
 }
+
+/* safety flags on suggested commands */
+.cmd-risk {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.25rem;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.cmd-risk svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.cmd-risk-destructive svg,
+.cmd-risk-sensitive svg {
+  color: var(--warning);
+}
+.cmd-risk-blocked {
+  margin-top: var(--sp-4);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--r-md);
+  background: var(--err-bg);
+  color: var(--err-text);
+}

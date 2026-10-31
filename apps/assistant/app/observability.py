@@ -38,6 +38,17 @@ RETRIEVAL_SECONDS = Histogram(
     buckets=(0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1),
 )
 RATE_LIMITED = Counter("exitzero_rate_limited_total", "Questions rejected by the per-IP rate limit")
+LLM_REQUESTS = Counter("exitzero_llm_requests_total", "Agent runs by outcome", ["outcome"])
+LLM_SECONDS = Histogram(
+    "exitzero_llm_seconds", "Time spent in the agent per question",
+    buckets=(0.5, 1, 2, 4, 8, 15, 30, 60),
+)
+LLM_TOKENS = Counter("exitzero_llm_tokens_total", "Tokens used by the agent", ["kind"])
+LLM_TOOL_CALLS = Counter("exitzero_llm_tool_calls_total", "Runbook tool calls made by the agent", ["tool"])
+GUARD_BLOCKED = Counter("exitzero_guard_blocked_total", "Commands removed from answers by the safety filter", ["reason"])
+GUARD_FLAGGED = Counter("exitzero_guard_flagged_total", "Commands kept but flagged in answers", ["risk"])
+INJECTION = Counter("exitzero_injection_suspected_total", "Pasted errors that look like prompt-injection attempts", ["kind"])
+REDACTIONS = Counter("exitzero_redactions_total", "Secrets removed from pasted errors before they left the process")
 
 _HASH_KEY = os.getenv("LOG_HASH_KEY", "").encode() or secrets.token_bytes(16)
 

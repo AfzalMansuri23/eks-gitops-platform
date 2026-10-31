@@ -1,0 +1,11 @@
+.venv/
+.cache/
+tests/
+tools/
+**/__pycache__/
+**/*.pyc
+requirements-dev.txt
+Dockerfile
+.dockerignore
+.env
+*.key
