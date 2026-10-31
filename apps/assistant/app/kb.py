@@ -2,8 +2,7 @@
 
 INCIDENTS are real failures from building this platform (README troubleshooting
 table, the Platform API runbooks, live debugging). The runbooks are general troubleshooting
-entries for common tools. Matching is keyword scoring for now; embedding search
-replaces `search` later without touching the API.
+entries for common tools. Matching lives in retrieval.py.
 """
 
 import re
@@ -466,17 +465,3 @@ ENTRIES = INCIDENTS + load_runbooks()
 
 def tools() -> list[str]:
     return sorted({e.tool for e in ENTRIES})
-
-
-def search(text: str, limit: int = 2) -> list[Entry]:
-    haystack = text.lower()
-    scored = []
-    for entry in ENTRIES:
-        hits = [kw for kw in entry.keywords if kw in haystack]
-        if hits:
-            # more matched phrases, then longer (more specific) ones, then the
-            # entry whose own keywords are most fully covered
-            score = (len(hits), sum(len(h) for h in hits), len(hits) / len(entry.keywords))
-            scored.append((score, entry))
-    scored.sort(key=lambda pair: pair[0], reverse=True)
-    return [entry for _, entry in scored[:limit]]

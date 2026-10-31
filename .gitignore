@@ -29,3 +29,6 @@ __pycache__/
 .vscode/
 Thumbs.db
 Desktop.ini
+#---------- ExitZero ----------
+#embedding vector cache, rebuilt from knowledge/ on startup
+apps/assistant/.cache/
