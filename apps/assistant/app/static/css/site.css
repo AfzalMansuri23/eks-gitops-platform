@@ -249,7 +249,7 @@ svg {
 }
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.6fr repeat(3, 1fr);
+  grid-template-columns: 1.6fr repeat(2, 1fr);
   gap: var(--sp-8);
 }
 .footer-blurb {
@@ -495,5 +495,12 @@ svg {
   .bot-say {
     right: 56px;
     max-width: calc(100% - 68px);
+  }
+}
+
+/* on very narrow phones the nav CTA does not fit; the hero has the same button */
+@media (max-width: 440px) {
+  .nav-actions .btn-primary {
+    display: none;
   }
 }

@@ -105,11 +105,6 @@ def console():
     return FileResponse(PAGES / "console.html")
 
 
-@app.get("/access")
-def access():
-    return FileResponse(PAGES / "access.html")
-
-
 @app.get("/architecture")
 def architecture():
     return FileResponse(PAGES / "architecture.html")

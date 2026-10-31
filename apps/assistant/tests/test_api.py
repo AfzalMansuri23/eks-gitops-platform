@@ -31,7 +31,7 @@ def test_tools(client):
     assert body["tools"] == kb.tools() and body["entries"] == len(kb.ENTRIES)
 
 
-@pytest.mark.parametrize("path", ["/", "/app", "/access", "/architecture"])
+@pytest.mark.parametrize("path", ["/", "/app", "/architecture"])
 def test_pages(client, path):
     r = client.get(path)
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
@@ -93,6 +93,12 @@ def test_no_cors(client):
     assert "access-control-allow-origin" not in r.headers
     r = client.options("/ask", headers={"origin": "https://evil.example", "access-control-request-method": "POST"})
     assert "access-control-allow-origin" not in r.headers
+
+
+def test_sign_in_page_is_gone(client):
+    assert client.get("/access").status_code == 404
+    for path in ("/", "/app", "/architecture"):
+        assert "/access" not in client.get(path).text
 
 
 def test_docs_disabled(client):
