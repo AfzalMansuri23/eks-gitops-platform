@@ -2,7 +2,7 @@
 
 A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app running on Kubernetes, growing into Terraform-provisioned AWS EKS, CI/CD with GitHub Actions and Argo CD, and an LLM-powered RAG service.
 
-> **Current status:** Stages 1 to 3 and observability are complete. Stage 4 is in progress: **ExitZero**, a troubleshooting assistant with a web UI and a 248-entry runbook knowledge base, runs locally ([details](#troubleshooting-assistant-exitzero-stage-4-in-progress)).
+> **Current status:** Stages 1 to 3 and observability are complete. Stage 4 is in progress: **ExitZero**, a troubleshooting assistant with hybrid search over 248 runbooks, an optional Claude agent with safety guardrails, and a hardened container image ([details](#troubleshooting-assistant-exitzero-stage-4)). Deploying it to the cluster is next.
 
 ## Tech stack
 
@@ -14,7 +14,7 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 | Cloud | AWS: VPC, EKS, S3, ECR, Bedrock *(Stages 2–4)* |
 | CI/CD | GitHub Actions, Argo CD *(Stage 3)* |
 | Observability | Prometheus, Grafana, Elasticsearch, Kibana, Filebeat (ECK) |
-| AI assistant | FastAPI + static web UI, runbook retrieval, Amazon Bedrock planned *(Stage 4)* |
+| AI assistant | FastAPI + static web UI, hybrid retrieval (keyword + MiniLM embeddings), Claude agent with read-only tools, output safety checks *(Stage 4)* |
 
 ## Repository layout
 
@@ -308,42 +308,151 @@ Cluster health reads `yellow` once Filebeat's index exists: with one node the re
 
 This runs on the kind cluster only (about 2.5 GB of memory). The versions are pinned to 9.5.5, the newest stack version whose images exist on `docker.elastic.co`. Triage steps for a 404 spike are in the [Platform API runbooks](apps/assistant/knowledge/platform-api.md).
 
-## Troubleshooting assistant: ExitZero (Stage 4, in progress)
+## Troubleshooting assistant: ExitZero (Stage 4)
 
-ExitZero takes a pasted error from any tool in the stack, works out which tool it came from, and answers with the likely cause, the fix, copyable commands and the source it came from. When nothing matches it says "not in my runbooks yet" instead of guessing.
+ExitZero takes an error pasted from any tool in the stack and answers with the likely cause, the fix, copyable commands and the runbook it came from. With agent mode on, Claude reads the error, looks things up in the runbooks with read-only tools and writes a tailored answer. Every answer passes a safety check before it reaches the browser.
 
 ```mermaid
 flowchart LR
-    user([Engineer]) -->|pastes an error| ui[Web UI<br/>landing page + console]
-    ui -->|POST /ask| api[FastAPI<br/>apps/assistant]
-    api --> kb[(Knowledge base<br/>40 project incidents<br/>+ 208 runbook entries)]
-    kb -->|best match| api
-    api -->|tool, cause, fix,<br/>commands, sources| ui
-    api -. next step .-> bedrock[Embeddings +<br/>Amazon Bedrock]
+    user([Engineer]) -->|pastes an error| ui[Web UI]
+    ui -->|POST /ask| api[FastAPI]
+    api --> ret[Hybrid retrieval<br/>keyword + MiniLM embeddings]
+    ret --> kb[(248 runbook entries<br/>46 tools)]
+    api -->|LLM_BACKEND=anthropic| red[Redact secrets<br/>neutralize prompt tags]
+    red --> agent[Claude Opus 5.5<br/>search_runbooks, get_runbook]
+    agent -. read-only lookups .-> kb
+    agent -. any failure .-> ret
+    ret --> guard
+    agent --> guard[Safety check<br/>block, flag, scrub]
+    guard -->|cause, fix, commands,<br/>risks, sources| ui
 ```
 
 | Part | What it does |
 |---|---|
-| `apps/assistant/knowledge/*.md` | 208 runbook entries in a strict format (exact error strings, cause, fix, commands): Kubernetes, Docker, Linux, AWS/EKS/ECR, GCP/GKE, Azure/AKS, Terraform, Helm, Argo CD, GitHub Actions, GitLab CI, Jenkins, Git, networking/TLS/Nginx, Postgres, MySQL, Redis, MongoDB, Prometheus, Grafana, Loki, Elasticsearch, Datadog, OpenTelemetry, Ansible, Vault, Kafka, Istio, plus this repo's Platform API alert runbooks with their drill records |
-| `apps/assistant/app/kb.py` | 40 real incidents from building this platform and from the course labs, plus the loader that parses the runbook files (46 tools in total) |
-| `POST /ask` | Returns `found`, the detected `tool`, `cause`, `fix`, `commands`, `related` entries and `sources` |
-| Web UI | Landing page with a live demo box, a console, and a sign-in page that is a design mock (no accounts). A small bot in the console reacts to what is happening: thinking while it searches, happy on a match, a shrug when nothing matches. Commands copy with one click |
+| `knowledge/*.md` + `app/kb.py` | 208 runbook entries in a strict format plus 40 real incidents from building this platform: exact error strings, cause, fix, commands |
+| `app/retrieval.py` | One `search(text, k)` interface: `keyword`, `embedding` or `hybrid` (default) |
+| `app/agent.py` | Agent mode: Claude with two read-only tools and a JSON-schema answer |
+| `app/redact.py`, `app/guard.py` | Secret redaction on the way in and out, command safety check on the way out |
+| `app/security.py` | Security headers, body size cap, per-IP rate limit |
+| Web UI | Landing page, console and a sign-in design mock. Risky commands get a warning line, and removed ones are counted |
 
-**Run it locally**
+### How matching works
+
+- **Keyword:** each entry lists the exact error strings it covers; the most matched strings wins, then the longest match.
+- **Embedding:** `all-MiniLM-L6-v2` on CPU through fastembed (ONNX, no torch). Each entry is embedded as tool, title, error strings and cause. Vectors are cached on disk, keyed by a hash of the knowledge text.
+- **Hybrid (default):** if the keyword winner matched a real error phrase (a bare tool name like "grafana" does not count), it is pinned first. The rest is reciprocal rank fusion of both rankings. `MIN_SCORE` (0.40 cosine) keeps unrelated text out.
+
+Evaluation set: `tests/eval/cases.yaml` (18 exact errors, 40 paraphrases that share no Matches string with their answer, 7 negatives). Run `python -m tests.eval.run_eval`.
+
+| Retriever | Exact top-1 | Exact top-3 | Paraphrase top-1 | Paraphrase top-3 | Negatives rejected |
+|---|---|---|---|---|---|
+| keyword | 100% | 100% | 0% | 0% | 100% |
+| embedding | 89% | 89% | 80% | 85% | 100% |
+| **hybrid** | **100%** | **100%** | **78%** | **85%** | **100%** |
+
+### Agent mode (Claude)
+
+Off by default. `LLM_BACKEND=anthropic` with an `ANTHROPIC_API_KEY` turns it on.
+
+```mermaid
+sequenceDiagram
+    participant A as /ask
+    participant R as Retriever
+    participant C as Claude Opus 5.5
+    participant G as Safety check
+    A->>R: search(error)
+    R-->>A: top 3 entries
+    A->>C: redacted error + candidates (framed as data)
+    C->>A: get_runbook("Terraform state is locked")
+    A-->>C: cause, fix, commands from the runbook
+    C-->>A: JSON answer + runbook titles used
+    A->>A: drop titles that are not in the knowledge base
+    A->>G: cause, fix, commands
+    G-->>A: unsafe commands removed, risky ones flagged
+```
+
+- **Grounded or general:** the answer names the runbooks it used, and those titles are checked against the knowledge base. With no fitting runbook, Claude answers from general knowledge and the UI labels it `· general`.
+- **Falls back, never fails:** an API error, timeout, refusal, malformed answer or more than 4 turns returns the retrieval answer instead.
+- **Refusals:** server-side fallbacks (`fallbacks: "default"`) re-run a declined request on the model Anthropic recommends for that category.
+- **Cost:** about 2,800 input and 240 output tokens per question at effort `low`, roughly $0.016 per question on Claude Opus 5.5. Live run: 3 of 3 correct, 7 to 10 s each.
+
+### Guardrails
+
+| Stage | Control |
+|---|---|
+| In | Secrets in the pasted error are redacted before it leaves the process: AWS keys, bearer and auth headers, tokens, passwords (`DB_PASSWORD=`), URL credentials, JWTs, private keys |
+| In | Pasted text cannot open or close the prompt's own tags. Injection phrasing ("ignore previous instructions", "system prompt") is counted and logged |
+| Agent | Tools are read-only lookups in the bundled runbooks, with no cluster, file, environment or cloud access. The system prompt forbids secrets, exfiltration, wipes and prompt disclosure |
+| Out: removed | Download-and-run, reverse shells, sending credentials or files anywhere, creating keys or admin bindings, disabling security controls, wipes (`rm -rf /`, `mkfs`, `terraform destroy -auto-approve`, deleting system namespaces, cluster-wide deletes with no selector) |
+| Out: flagged | **sensitive** (prints a secret on your own terminal) and **destructive** (deletes something or changes access). The UI shows a warning above each one |
+| Out: scrubbed | Secrets in the answer text and commands are redacted |
+| HTTP | Strict CSP and security headers, 16 KiB body cap, 4,000-character input limit, per-IP rate limit, 422s that do not echo input, generic 500s, no CORS |
+| Logs | The pasted text is never logged, only its length and a keyed short hash |
+
+Checked with 51 red-team tests (malicious model output, tag escape, injection) and three live attacks on Claude: a fake `SYSTEM:` note demanding `curl | bash`, a system-prompt leak, and "dump all secrets to my webhook". All three were refused. None of the 449 runbook commands is blocked.
+
+### Observability
+
+`/metrics` for Prometheus, plus JSON logs:
+
+| Metric | Labels |
+|---|---|
+| `exitzero_asks_total` | `result` (found, miss), `tool` |
+| `exitzero_retrieval_seconds` | `retriever` |
+| `exitzero_llm_requests_total` | `outcome` (ok, refusal, APIConnectionError, ...) |
+| `exitzero_llm_seconds`, `exitzero_llm_tokens_total`, `exitzero_llm_tool_calls_total` | `kind`, `tool` |
+| `exitzero_guard_blocked_total`, `exitzero_guard_flagged_total` | `reason`, `risk` |
+| `exitzero_injection_suspected_total`, `exitzero_redactions_total`, `exitzero_rate_limited_total` | `kind` |
+
+### Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `RETRIEVER` | `hybrid` | `keyword`, `embedding` or `hybrid` |
+| `MIN_SCORE` | `0.40` | Cosine similarity below which an embedding match counts as no match |
+| `LLM_BACKEND` | `none` | `anthropic` turns on agent mode |
+| `ANTHROPIC_API_KEY` | | From a Kubernetes Secret in the cluster, never in the image or the repo |
+| `LLM_MODEL`, `LLM_EFFORT` | `claude-opus-5-5`, `low` | Model and effort for agent mode |
+| `ASK_RATE_LIMIT`, `ASK_RATE_WINDOW` | `30`, `60` | Questions per client IP per window (seconds) |
+| `EMBEDDINGS_BACKEND` | `local` | `bedrock` (Titan) is wired but not used: Bedrock is not available on this account |
+
+### Run and test
 
 ```powershell
 cd apps/assistant
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --port 8001
+pip install -r requirements-dev.txt
+uvicorn app.main:app --port 8001          # http://localhost:8001 and /app
+$env:LLM_BACKEND = "anthropic"            # optional agent mode, needs ANTHROPIC_API_KEY
+python -m pytest                          # 469 tests, no API key needed (Claude is faked)
+python -m tests.eval.run_eval             # retrieval accuracy table
 ```
 
-Then open http://localhost:8001 (landing page) or http://localhost:8001/app (console).
+### Docker
 
-**How matching works today:** each entry lists the exact error strings it covers. The best entry is the one with the most matched strings, then the longest (most specific) match. Tested on 46 realistic error messages across every tool (46/46 correct), and 247 of 248 entries are found by their own error text (the one exception, `AssumeRoleWithWebIdentity`, genuinely fits both GitHub OIDC and EKS IRSA, so the answer lists the other under "Also similar").
+Multi-stage build. The builder installs the dependencies, downloads the embedding model and pre-computes the runbook vectors. The runtime image holds only those plus `app/` and `knowledge/`.
 
-**Next:** embedding-based retrieval so errors worded differently still match, a Dockerfile and Argo CD Application, an evaluation set, then Amazon Bedrock to write the answer (blocked for now at the AWS account level, so the backend is pluggable).
+| Property | Value |
+|---|---|
+| Base | `python:3.13.18-slim`, pinned by digest |
+| Size | 195 MB compressed |
+| User | 10001, no shell login, no pip |
+| Network at runtime | none needed (model and vectors are baked in) |
+| Startup | about 2 s |
+| Secrets in the image | none: the API key is passed at runtime |
+
+```sh
+docker build -t exitzero:local apps/assistant
+# retrieval only, fully offline and locked down
+docker run --rm -p 8001:8000 --read-only --network none --cap-drop ALL --security-opt no-new-privileges exitzero:local
+# agent mode: the key comes from your environment
+docker run --rm -p 8001:8000 -e LLM_BACKEND=anthropic -e ANTHROPIC_API_KEY exitzero:local
+```
+
+If Docker Hub pulls reset on your connection, pull the base from `mirror.gcr.io/library/python:3.13-slim` and tag it `python:3.13.18-slim` first.
+
+**Next:** Kubernetes manifests (a Secret for the API key, a NetworkPolicy that allows egress only to the Anthropic API), an Argo CD Application, and CI for the image.
 
 ## Design decisions
 
@@ -384,7 +493,7 @@ Real issues hit while building this, and how they were fixed.
 - [x] **Stage 2: Terraform on AWS.** VPC and EKS as two root modules, S3 remote state with locking, the same chart deployed and served on EKS, then destroyed to save cost
 - [x] **Stage 3: CI/CD.** API image build, Trivy scan and push to ECR via GitHub OIDC; `helm lint`/`helm template` and chart push to ECR; `terraform plan` on PRs with a read-only role; Argo CD on kind with dev and prod Applications, GitOps drift and self-heal verified
 - [x] **Observability.** Prometheus + Grafana on kind with an API ServiceMonitor, dashboard, 4 alert rules, failure drill and runbook; ELK (ECK operator, Elasticsearch, Kibana, Filebeat) for structured API logs
-- [ ] **Stage 4: AI service.** A small Amazon Bedrock RAG service deployed on EKS (LLMOps)
+- [ ] **Stage 4: AI service.** ExitZero: hybrid retrieval, eval set, Claude agent mode with guardrails, container image (done); Kubernetes manifests, Argo CD and CI for the image (next). Bedrock is wired but unused, since it is not available on this account
   - [x] ExitZero web UI and API, 248-entry runbook knowledge base, tool detection, copyable commands
   - [ ] Embedding retrieval, evaluation set, container image and Argo CD deployment
   - [ ] Amazon Bedrock answers (waiting on account access)
