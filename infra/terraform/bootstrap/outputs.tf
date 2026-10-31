@@ -13,3 +13,7 @@ output "ecr_chart_repository_url" {
 output "github_plan_role_arn" {
   value = aws_iam_role.github_plan.arn
 }
+
+output "ecr_assistant_repository_url" {
+  value = aws_ecr_repository.assistant.repository_url
+}
