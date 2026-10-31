@@ -290,7 +290,7 @@ textarea:focus-visible {
 }
 .cmd-risk-destructive svg,
 .cmd-risk-sensitive svg {
-  color: var(--warning);
+  color: var(--warn-text);
 }
 .cmd-risk-blocked {
   margin-top: var(--sp-4);

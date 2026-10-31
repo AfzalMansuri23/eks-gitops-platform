@@ -25,7 +25,7 @@ h4 {
   line-height: 1.1;
   letter-spacing: -0.02em;
   margin: 0;
-  font-weight: 700;
+  font-weight: 500;
 }
 p {
   margin: 0;
@@ -101,7 +101,7 @@ svg {
   padding: 0.65rem 1.15rem;
   border-radius: var(--r-md);
   border: 1px solid transparent;
-  font: 600 var(--fs-sm) / 1.2 var(--font-body);
+  font: 500 var(--fs-sm) / 1.2 var(--font-body);
   text-decoration: none;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
@@ -121,7 +121,6 @@ svg {
 .btn-primary {
   background: var(--brand);
   color: var(--on-brand);
-  box-shadow: 0 8px 24px -10px var(--teal);
 }
 .btn-primary:hover {
   background: var(--brand-hover);
