@@ -98,6 +98,11 @@ def access():
     return FileResponse(PAGES / "access.html")
 
 
+@app.get("/architecture")
+def architecture():
+    return FileResponse(PAGES / "architecture.html")
+
+
 @app.post("/ask", response_model=AskResponse, dependencies=[Depends(rate_limit)])
 def ask(req: AskRequest):
     start = time.perf_counter()
