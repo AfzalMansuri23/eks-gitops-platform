@@ -334,7 +334,7 @@ flowchart LR
 | `app/agent.py` | Agent mode: Claude with two read-only tools and a JSON-schema answer |
 | `app/redact.py`, `app/guard.py` | Secret redaction on the way in and out, command safety check on the way out |
 | `app/security.py` | Security headers, body size cap, per-IP rate limit |
-| Web UI | Landing page, console and a sign-in design mock. Risky commands get a warning line, and removed ones are counted |
+| Web UI | Landing page, console and architecture page, with no accounts or sign-in. Risky commands get a warning line, and removed ones are counted |
 
 ### How matching works
 
