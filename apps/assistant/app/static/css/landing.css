@@ -80,11 +80,6 @@ section {
   gap: var(--sp-3);
   margin-top: var(--sp-8);
 }
-.hero-note {
-  margin-top: var(--sp-4);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
 
 /* hero mockup */
 .mock {
