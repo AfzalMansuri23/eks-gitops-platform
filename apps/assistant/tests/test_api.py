@@ -54,7 +54,7 @@ def test_ask_paraphrase(client):
 def test_ask_not_found(client):
     body = client.post("/ask", json={"error": "how do I bake sourdough bread"}).json()
     assert body == {"found": False, "tool": None, "cause": None, "fix": None, "commands": [], "related": [],
-                    "sources": [], "backend": "hybrid", "score": None}
+                    "sources": [], "backend": "hybrid", "score": None, "grounded": None, "redactions": 0}
 
 
 @pytest.mark.parametrize("payload", [{}, {"error": "ab"}, {"error": 5}, {"error": "x" * 4001}, {"wrong": "field"}])

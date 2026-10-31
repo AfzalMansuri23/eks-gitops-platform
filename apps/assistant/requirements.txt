@@ -4,3 +4,4 @@ fastembed==0.9.1
 numpy==2.5.4
 prometheus-fastapi-instrumentator==8.1.0
 python-json-logger==2.0.7
+anthropic==2.3.0

@@ -10,8 +10,14 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+import anthropic
+
 from . import kb, retrieval
-from .observability import ASKS, RETRIEVAL_SECONDS, fingerprint, log
+from .agent import AgentError, make_agent
+from .observability import (
+    ASKS, LLM_REQUESTS, LLM_SECONDS, LLM_TOKENS, LLM_TOOL_CALLS, REDACTIONS, RETRIEVAL_SECONDS, fingerprint, log,
+)
+from .redact import redact
 from .security import SecurityMiddleware, rate_limit
 
 BASE = Path(__file__).parent
@@ -19,6 +25,7 @@ PAGES = BASE / "pages"
 MAX_ERROR_CHARS = 4000
 
 RETRIEVER = retrieval.make_retriever()
+AGENT = make_agent(RETRIEVER)  # None unless LLM_BACKEND=anthropic
 
 # API docs are off unless asked for: they load scripts from a CDN the CSP blocks
 docs = os.getenv("ENABLE_DOCS", "false").lower() == "true"
@@ -71,6 +78,8 @@ class AskResponse(BaseModel):
     sources: list[Source] = []
     backend: str
     score: float | None = None
+    grounded: bool | None = None  # agent only: answer backed by a runbook
+    redactions: int = 0  # secrets removed before the error was sent to the LLM
 
 
 @app.get("/health")
@@ -110,21 +119,29 @@ def ask(req: AskRequest):
     elapsed = time.perf_counter() - start
     RETRIEVAL_SECONDS.labels(RETRIEVER.name).observe(elapsed)
 
-    best, score = hits[0] if hits else (None, None)
-    ASKS.labels("found" if best else "miss", best.tool if best else "none").inc()
+    answer = ask_agent(req.error, hits) if AGENT is not None else None
+    if answer is None:
+        answer = from_retrieval(hits)
+
+    ASKS.labels("found" if answer.found else "miss", answer.tool or "none").inc()
     log.info(
         "ask",
         extra={
             **fingerprint(req.error),
-            "found": best is not None,
-            "tool": best.tool if best else None,
-            "score": score,
-            "retriever": RETRIEVER.name,
+            "found": answer.found,
+            "tool": answer.tool,
+            "score": answer.score,
+            "backend": answer.backend,
             "retrieval_ms": round(elapsed * 1000, 2),
         },
     )
-    if best is None:
+    return answer
+
+
+def from_retrieval(hits) -> AskResponse:
+    if not hits:
         return AskResponse(found=False, backend=RETRIEVER.name)
+    best, score = hits[0]
     return AskResponse(
         found=True,
         tool=best.tool,
@@ -135,4 +152,46 @@ def ask(req: AskRequest):
         sources=[Source(title=h.source, snippet=h.title) for h, _ in hits],
         backend=RETRIEVER.name,
         score=score,
+    )
+
+
+def ask_agent(error: str, hits) -> AskResponse | None:
+    """Run the agent on the redacted error. None means: use the retrieval answer."""
+    clean, redactions = redact(error)
+    REDACTIONS.inc(redactions)
+    start = time.perf_counter()
+    try:
+        result = AGENT.ask(clean, [e for e, _ in hits])
+        outcome = "ok"
+    except AgentError as e:
+        result, outcome = None, e.reason
+    except anthropic.APIError as e:
+        result, outcome = None, type(e).__name__
+    seconds = time.perf_counter() - start
+    LLM_SECONDS.observe(seconds)
+    LLM_REQUESTS.labels(outcome).inc()
+    log.info("agent", extra={"outcome": outcome, "llm_ms": round(seconds * 1000), "redactions": redactions,
+                             **({"model": result.model, "tool_calls": result.tool_calls, **result.usage} if result else {})})
+    if result is None:
+        return None
+    for kind, n in result.usage.items():
+        LLM_TOKENS.labels(kind.removesuffix("_tokens")).inc(n)
+    for name in result.tool_calls:
+        LLM_TOOL_CALLS.labels(name).inc()
+
+    backend = f"{result.model} + runbooks" if result.grounded else f"{result.model} · general"
+    if not result.found:
+        return AskResponse(found=False, backend=result.model, redactions=redactions)
+    used = {e.title for e in result.runbooks}
+    return AskResponse(
+        found=True,
+        tool=result.tool,
+        cause=result.cause,
+        fix=result.fix,
+        commands=result.commands,
+        related=[e.title for e in result.runbooks[1:]] + [h.title for h, _ in hits if h.title not in used][:2],
+        sources=[Source(title=e.source, snippet=e.title) for e in result.runbooks],
+        backend=backend,
+        grounded=result.grounded,
+        redactions=redactions,
     )
