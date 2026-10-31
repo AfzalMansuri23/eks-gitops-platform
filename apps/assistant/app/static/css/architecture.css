@@ -363,3 +363,39 @@
   width: min(1600px, 100vw - 2rem);
   margin-left: calc(50% - min(800px, 50vw - 1rem));
 }
+
+/* view switch: kind today / AWS lab day */
+.arch-views {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+.arch-view {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font: 500 var(--fs-sm) / 1.2 var(--font-body);
+  cursor: pointer;
+}
+.arch-view[aria-selected="true"] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+.arch-views-key {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* parts in the plan but not in the code yet */
+.node.is-planned .node-box {
+  stroke-dasharray: 5 4;
+}
+.edge.is-planned .edge-line {
+  stroke-dasharray: 2 5;
+}

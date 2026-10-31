@@ -41,7 +41,12 @@ A hands-on DevOps portfolio project, built in stages: a Helm-packaged web app ru
 ```
 ## Architecture
 
-An interactive, animated diagram of the whole platform: 24 components, 27 connections and 7 flows, each component linked to the file that defines it.
+An interactive, animated diagram of the whole platform, with two views, each component linked to the file that defines it:
+
+- **kind (today):** what runs on the laptop cluster plus CI, ECR and the AWS stacks (25 components, 29 connections, 7 flows)
+- **AWS (EKS lab day):** what `scripts/eks-up.ps1` and the Terraform create: VPC, NAT, an NLB locked to your IP, the hardened EKS cluster, ingress-nginx and the Claude key Secret, plus the same-day teardown. Parts the code does not deploy yet (ExitZero and Argo CD on EKS) are drawn dashed (18 components, 24 connections, 6 flows)
+
+Open the AWS view directly with `#aws` on the page URL.
 
 - **Live page:** [afzalmansuri23.github.io/eks-gitops-platform/architecture.html](https://afzalmansuri23.github.io/eks-gitops-platform/architecture.html) (served by GitHub Pages from `docs/` on `main`)
 - **In the app:** `/architecture` in ExitZero (footer link "Architecture")
@@ -59,7 +64,7 @@ An interactive, animated diagram of the whole platform: 24 components, 27 connec
 
 Pick a flow to play it hop by hop, hover a component to see what it talks to, click it for details and its source file.
 
-**Updating it:** all content lives in [`apps/assistant/app/static/data/architecture.json`](apps/assistant/app/static/data/architecture.json) (zones, nodes, edges, flows and their steps). After moving or adding nodes, reroute the edges and regenerate the standalone page:
+**Updating it:** all content lives in [`architecture.json`](apps/assistant/app/static/data/architecture.json) (kind view) and [`architecture-eks.json`](apps/assistant/app/static/data/architecture-eks.json) (AWS view): zones, nodes, edges, flows and their steps. A node or edge with `"status": "planned"` is drawn dashed. After moving or adding nodes, reroute the edges and regenerate the standalone page:
 
 ```sh
 cd apps/assistant

@@ -1,6 +1,6 @@
 """Architecture diagram tooling.
 
-    python tools/architecture.py route   # recompute every edge path in architecture.json
+    python tools/architecture.py route   # recompute every edge path in both data files
     python tools/architecture.py build   # write docs/architecture.html (self-contained)
 
 Node positions live in app/static/data/architecture.json. `route` draws
@@ -15,7 +15,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIG = ROOT / "app" / "static" / "data" / "architecture.json"
+DATA = ROOT / "app" / "static" / "data"
+# the views on the architecture page: (id, label, data file)
+VIEWS = [
+    ("kind", "kind (today)", DATA / "architecture.json"),
+    ("aws", "AWS (EKS lab day)", DATA / "architecture-eks.json"),
+]
 STATIC = ROOT / "app" / "static"
 DOCS = ROOT.parents[1] / "docs" / "architecture.html"
 
@@ -184,11 +189,11 @@ def route(cfg):
 
 
 def build():
-    cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
+    views = [{"id": i, "label": label, "config": json.loads(f.read_text(encoding="utf-8"))} for i, label, f in VIEWS]
     css = (STATIC / "css" / "tokens.css").read_text(encoding="utf-8") + (STATIC / "css" / "architecture.css").read_text(encoding="utf-8")
     js = (STATIC / "js" / "architecture.js").read_text(encoding="utf-8")
     template = (ROOT / "tools" / "architecture.template.html").read_text(encoding="utf-8")
-    data = json.dumps(cfg, separators=(",", ":")).replace("</", "<\\/")
+    data = json.dumps(views, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*CSS*/", css).replace("/*JS*/", js).replace("/*DATA*/", data)
     DOCS.parent.mkdir(exist_ok=True)
     DOCS.write_text(html, encoding="utf-8", newline="\n")
@@ -207,9 +212,10 @@ def dump(cfg):
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "route":
-        cfg = route(json.loads(CONFIG.read_text(encoding="utf-8")))
-        CONFIG.write_text(dump(cfg), encoding="utf-8", newline="\n")
-        print(f"routed {len(cfg['edges'])} edges")
+        for _, _, f in VIEWS:
+            cfg = route(json.loads(f.read_text(encoding="utf-8")))
+            f.write_text(dump(cfg), encoding="utf-8", newline="\n")
+            print(f"{f.name}: routed {len(cfg['edges'])} edges")
     elif cmd == "build":
         build()
     else:

@@ -1,0 +1,565 @@
+{
+  "canvas": {
+    "width": 1700,
+    "height": 1070
+  },
+  "repo": "https://github.com/AfzalMansuri23/eks-gitops-platform/blob/main/",
+  "zones": [
+    {
+      "id": "github",
+      "label": "GitHub · eks-gitops-platform",
+      "x": 270,
+      "y": 40,
+      "w": 760,
+      "h": 300
+    },
+    {
+      "id": "regional",
+      "label": "AWS regional services · ap-south-1",
+      "x": 1070,
+      "y": 40,
+      "w": 610,
+      "h": 300
+    },
+    {
+      "id": "vpc",
+      "label": "AWS VPC · 10.0.0.0/16 · 2 AZs",
+      "x": 250,
+      "y": 390,
+      "w": 1150,
+      "h": 650
+    },
+    {
+      "id": "public",
+      "label": "Public subnets",
+      "x": 270,
+      "y": 430,
+      "w": 1110,
+      "h": 130
+    },
+    {
+      "id": "eks",
+      "label": "EKS · private subnets · 2 x c7i-flex.large",
+      "x": 270,
+      "y": 600,
+      "w": 1110,
+      "h": 420
+    },
+    {
+      "id": "internet",
+      "label": "Outside AWS",
+      "x": 1440,
+      "y": 600,
+      "w": 240,
+      "h": 200
+    }
+  ],
+  "flows": [
+    {
+      "id": "build",
+      "name": "Build & push",
+      "color": {
+        "dark": "#5da9e9",
+        "light": "#2a63a8"
+      },
+      "steps": [
+        {
+          "edges": [
+            "b1"
+          ],
+          "text": "An engineer pushes to main."
+        },
+        {
+          "edges": [
+            "b2",
+            "b3"
+          ],
+          "text": "ci builds the API image; the assistant workflow runs the tests and eval, then builds ExitZero. Both images are scanned by Trivy."
+        },
+        {
+          "edges": [
+            "b4",
+            "b5"
+          ],
+          "text": "On main, both images go to ECR, tagged with the commit SHA."
+        },
+        {
+          "edges": [
+            "b6"
+          ],
+          "text": "Planned: once ExitZero's manifests exist, the nodes pull its image from ECR by SHA (the node role already has ECR read access)."
+        }
+      ]
+    },
+    {
+      "id": "lab",
+      "name": "Lab day: up and down",
+      "color": {
+        "dark": "#a3b4b7",
+        "light": "#4c6063"
+      },
+      "steps": [
+        {
+          "edges": [
+            "u1"
+          ],
+          "text": "eks-up.ps1 reads your public IP, then applies the network stack: VPC, subnets, internet gateway and one NAT gateway."
+        },
+        {
+          "edges": [
+            "u2"
+          ],
+          "text": "It applies the eks stack with your IP as the only CIDR allowed on the API endpoint, and writes a kubeconfig context."
+        },
+        {
+          "edges": [
+            "u5"
+          ],
+          "text": "The node group joins: free-tier-eligible c7i-flex.large, IMDSv2 with hop limit 1, VPC CNI with network policy on."
+        },
+        {
+          "edges": [
+            "u3"
+          ],
+          "text": "Helm installs ingress-nginx 4.15.1."
+        },
+        {
+          "edges": [
+            "u4"
+          ],
+          "text": "Its LoadBalancer Service makes AWS create a Network Load Balancer that only accepts your IP."
+        },
+        {
+          "edges": [
+            "u4",
+            "u2",
+            "u1"
+          ],
+          "text": "Same day, eks-down.ps1 deletes the LoadBalancer Service and PVCs, waits until AWS removes the NLB, destroys eks then network, and runs aws-check.ps1."
+        }
+      ]
+    },
+    {
+      "id": "request",
+      "name": "User request",
+      "color": {
+        "dark": "#f2a649",
+        "light": "#9a5a08"
+      },
+      "steps": [
+        {
+          "edges": [
+            "r1"
+          ],
+          "text": "Your browser reaches the NLB. Any other IP is dropped by the source range."
+        },
+        {
+          "edges": [
+            "r2"
+          ],
+          "text": "The NLB forwards to ingress-nginx and keeps your IP (externalTrafficPolicy Local)."
+        },
+        {
+          "edges": [
+            "r3"
+          ],
+          "text": "Planned: an Ingress rule sends ExitZero's host to its Service."
+        },
+        {
+          "edges": [
+            "r4"
+          ],
+          "text": "Planned: in agent mode, ExitZero calls the Anthropic API through the NAT gateway."
+        }
+      ]
+    },
+    {
+      "id": "creds",
+      "name": "Credentials",
+      "color": {
+        "dark": "#e8749f",
+        "light": "#a32f63"
+      },
+      "steps": [
+        {
+          "edges": [
+            "c1",
+            "c2"
+          ],
+          "text": "On main, ci and assistant trade their GitHub OIDC token for the push role. No AWS keys are stored in GitHub."
+        },
+        {
+          "edges": [
+            "c3"
+          ],
+          "text": "On pull requests, terraform-plan gets the read-only plan role."
+        },
+        {
+          "edges": [
+            "c4"
+          ],
+          "text": "eks-up pipes EXITZERO_EKS_ANTHROPIC_KEY into the exitzero-anthropic Secret. It never touches disk or a command line."
+        },
+        {
+          "edges": [
+            "c5"
+          ],
+          "text": "Planned: the ExitZero Deployment reads the key from that Secret."
+        }
+      ]
+    },
+    {
+      "id": "gitops",
+      "name": "GitOps (planned)",
+      "color": {
+        "dark": "#2fc4b2",
+        "light": "#0b6f64"
+      },
+      "steps": [
+        {
+          "edges": [
+            "g1"
+          ],
+          "text": "Planned: Argo CD on EKS polls main, as it does on kind today."
+        },
+        {
+          "edges": [
+            "g2"
+          ],
+          "text": "Planned: it applies ExitZero's manifests, pinned to an image SHA."
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "name": "Plan on PRs",
+      "color": {
+        "dark": "#a594f5",
+        "light": "#5a43b5"
+      },
+      "steps": [
+        {
+          "edges": [
+            "i1"
+          ],
+          "text": "A pull request that touches infra/terraform runs terraform-plan."
+        },
+        {
+          "edges": [
+            "i2"
+          ],
+          "text": "The plan reads state from S3 without taking the lock."
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "dev",
+      "title": "Engineer",
+      "subtitle": "eks-up, eks-down",
+      "tag": "DEV",
+      "flow": "lab",
+      "x": 40,
+      "y": 90,
+      "description": "Runs the lab day from a laptop. Terraform asks before every apply and destroy.",
+      "facts": [
+        "IP locks API + NLB",
+        "teardown same day",
+        "aws-check exits 1 if anything bills"
+      ],
+      "source": "scripts/eks-up.ps1"
+    },
+    {
+      "id": "user",
+      "title": "Browser",
+      "subtitle": "your IP only",
+      "tag": "WEB",
+      "flow": "request",
+      "x": 40,
+      "y": 470,
+      "description": "Only the IP that ran eks-up can reach the load balancer. Plain HTTP for the demo.",
+      "facts": [
+        "loadBalancerSourceRanges",
+        "HTTP only"
+      ],
+      "source": "k8s/eks/ingress-nginx-values.yaml"
+    },
+    {
+      "id": "repo",
+      "title": "Git repo",
+      "subtitle": "main branch",
+      "tag": "GIT",
+      "flow": "build",
+      "x": 310,
+      "y": 90,
+      "description": "The source of truth for code, infrastructure and scripts.",
+      "facts": [
+        "infra/terraform",
+        "scripts/",
+        "k8s/eks"
+      ],
+      "source": "README.md"
+    },
+    {
+      "id": "ci",
+      "title": "ci workflow",
+      "subtitle": "on apps/api/**",
+      "tag": "CI",
+      "flow": "build",
+      "x": 310,
+      "y": 220,
+      "description": "Builds the API image, fails on HIGH or CRITICAL CVEs, pushes to ECR on main.",
+      "facts": [
+        "Trivy scan",
+        "tag = git SHA"
+      ],
+      "source": ".github/workflows/ci.yml"
+    },
+    {
+      "id": "acii",
+      "title": "assistant workflow",
+      "subtitle": "on apps/assistant/**",
+      "tag": "AS",
+      "flow": "build",
+      "x": 560,
+      "y": 220,
+      "description": "Tests and retrieval eval on every PR; Trivy scan of the ExitZero image; push to ECR on main.",
+      "facts": [
+        "pytest + eval",
+        "Trivy HIGH/CRITICAL",
+        "ECR push on main"
+      ],
+      "source": ".github/workflows/assistant.yml"
+    },
+    {
+      "id": "tfplan",
+      "title": "terraform-plan",
+      "subtitle": "on PRs to infra/",
+      "tag": "TF",
+      "flow": "plan",
+      "x": 810,
+      "y": 220,
+      "description": "fmt, validate and plan with a read-only role on pull requests.",
+      "facts": [
+        "read-only role",
+        "plan -lock=false"
+      ],
+      "source": ".github/workflows/terraform-plan.yml"
+    },
+    {
+      "id": "oidc",
+      "title": "IAM roles",
+      "subtitle": "GitHub OIDC",
+      "tag": "IAM",
+      "flow": "creds",
+      "x": 1110,
+      "y": 90,
+      "description": "GitHub's OIDC token is traded for short-lived credentials: a push role for main, a read-only role for PRs.",
+      "facts": [
+        "push role: main only",
+        "plan role: PRs only",
+        "ECR: api, assistant, chart"
+      ],
+      "source": "infra/terraform/bootstrap/github_oidc.tf"
+    },
+    {
+      "id": "ecr",
+      "title": "ECR",
+      "subtitle": "api, assistant, chart",
+      "tag": "ECR",
+      "flow": "build",
+      "x": 1410,
+      "y": 90,
+      "description": "Images and the chart, tagged with the commit SHA.",
+      "facts": [
+        "immutable tags",
+        "scan on push",
+        "keep last 10"
+      ],
+      "source": "infra/terraform/bootstrap/ecr.tf"
+    },
+    {
+      "id": "s3",
+      "title": "S3 state",
+      "subtitle": "state + lockfile",
+      "tag": "S3",
+      "flow": "plan",
+      "x": 1110,
+      "y": 220,
+      "description": "Terraform state for bootstrap, network and eks. It is never destroyed.",
+      "facts": [
+        "bucket from backend.hcl",
+        "use_lockfile"
+      ],
+      "source": "infra/terraform/backend.hcl.example"
+    },
+    {
+      "id": "eksapi",
+      "title": "EKS API endpoint",
+      "subtitle": "public, your IP only",
+      "tag": "K8S",
+      "flow": "lab",
+      "x": 1410,
+      "y": 220,
+      "description": "The cluster's public API endpoint accepts only the CIDRs in admin_cidrs. Terraform rejects 0.0.0.0/0.",
+      "facts": [
+        "public_access_cidrs",
+        "0.0.0.0/0 rejected",
+        "private endpoint on"
+      ],
+      "source": "infra/terraform/eks/main.tf"
+    },
+    {
+      "id": "nlb",
+      "title": "Network LB",
+      "subtitle": "made by ingress-nginx",
+      "tag": "NLB",
+      "flow": "request",
+      "x": 320,
+      "y": 470,
+      "description": "Created by AWS for the ingress-nginx LoadBalancer Service, so Terraform does not know about it. eks-down removes it first.",
+      "facts": [
+        "your IP only",
+        "client IP kept",
+        "deleted before destroy"
+      ],
+      "source": "k8s/eks/ingress-nginx-values.yaml"
+    },
+    {
+      "id": "nat",
+      "title": "NAT gateway",
+      "subtitle": "private egress",
+      "tag": "NAT",
+      "flow": "lab",
+      "x": 1130,
+      "y": 470,
+      "description": "Outbound access for the private subnets. Billed by the hour, so eks-down destroys the network stack too.",
+      "facts": [
+        "1 NAT gateway",
+        "destroyed by eks-down"
+      ],
+      "source": "infra/terraform/network/main.tf"
+    },
+    {
+      "id": "ingress",
+      "title": "ingress-nginx",
+      "subtitle": "chart 4.15.1",
+      "tag": "ING",
+      "flow": "lab",
+      "x": 320,
+      "y": 680,
+      "description": "Installed by eks-up with Helm. Its Service is the one that creates the NLB.",
+      "facts": [
+        "installed by eks-up",
+        "externalTrafficPolicy Local"
+      ],
+      "source": "scripts/eks-up.ps1"
+    },
+    {
+      "id": "nodes",
+      "title": "Worker nodes",
+      "subtitle": "2 x c7i-flex.large",
+      "tag": "EC2",
+      "flow": "lab",
+      "x": 320,
+      "y": 900,
+      "description": "Managed node group in the private subnets. Pods cannot read instance metadata, so they cannot borrow the node's IAM role.",
+      "facts": [
+        "IMDSv2, hop limit 1",
+        "free-tier eligible",
+        "network policy enforced"
+      ],
+      "source": "infra/terraform/eks/main.tf"
+    },
+    {
+      "id": "exitzero",
+      "title": "ExitZero",
+      "subtitle": "ns assistant · planned",
+      "tag": "EZ",
+      "flow": "request",
+      "x": 640,
+      "y": 680,
+      "status": "planned",
+      "description": "Not deployed by the code yet: its Kubernetes manifests are the next step. The image is already built, scanned and pushed by CI.",
+      "facts": [
+        "image in ECR",
+        "manifests next"
+      ],
+      "source": "apps/assistant/Dockerfile"
+    },
+    {
+      "id": "secret",
+      "title": "Secret",
+      "subtitle": "exitzero-anthropic",
+      "tag": "KEY",
+      "flow": "creds",
+      "x": 640,
+      "y": 900,
+      "description": "Created by eks-up when EXITZERO_EKS_ANTHROPIC_KEY is set. The key is piped to kubectl and never written to disk.",
+      "facts": [
+        "ns assistant",
+        "optional",
+        "separate key"
+      ],
+      "source": "scripts/eks-up.ps1"
+    },
+    {
+      "id": "argo",
+      "title": "Argo CD",
+      "subtitle": "planned on EKS",
+      "tag": "ARG",
+      "flow": "gitops",
+      "x": 960,
+      "y": 680,
+      "status": "planned",
+      "description": "Runs on kind today. eks-up does not install it on EKS yet.",
+      "facts": [
+        "kind today",
+        "not in eks-up yet"
+      ],
+      "source": "argocd/applications/api.yaml"
+    },
+    {
+      "id": "anthropic",
+      "title": "Anthropic API",
+      "subtitle": "Claude, outside AWS",
+      "tag": "AI",
+      "flow": "request",
+      "x": 1460,
+      "y": 680,
+      "description": "Agent mode calls Claude here through the NAT gateway. Off unless the key Secret exists.",
+      "facts": [
+        "claude-opus-5-5",
+        "via NAT"
+      ],
+      "source": "apps/assistant/app/agent.py"
+    }
+  ],
+  "edges": [
+    {"id": "b1", "from": "dev", "to": "repo", "flow": "build", "path": [[240, 120], [310, 120]]},
+    {"id": "b2", "from": "repo", "to": "ci", "flow": "build", "path": [[410, 150], [410, 220]]},
+    {"id": "b3", "from": "repo", "to": "acii", "flow": "build", "path": [[510, 140], [580, 140], [580, 220]]},
+    {"id": "b4", "from": "ci", "to": "ecr", "flow": "build", "path": [[490, 280], [490, 320], [1360, 320], [1360, 120], [1410, 120]]},
+    {"id": "b5", "from": "acii", "to": "ecr", "flow": "build", "path": [[740, 280], [740, 300], [1380, 300], [1380, 140], [1410, 140]]},
+    {"id": "b6", "from": "ecr", "to": "exitzero", "flow": "build", "status": "planned", "path": [[1410, 100], [1330, 100], [1330, 400], [800, 400], [800, 680]]},
+    {"id": "u1", "from": "dev", "to": "nat", "flow": "lab", "path": [[220, 150], [220, 380], [1150, 380], [1150, 470]]},
+    {"id": "u2", "from": "dev", "to": "eksapi", "flow": "lab", "path": [[240, 140], [260, 140], [260, 350], [1430, 350], [1430, 280]]},
+    {"id": "u5", "from": "eksapi", "to": "nodes", "flow": "lab", "path": [[1410, 270], [1390, 270], [1390, 850], [500, 850], [500, 900]]},
+    {"id": "u3", "from": "eksapi", "to": "ingress", "flow": "lab", "path": [[1450, 280], [1450, 590], [640, 590], [640, 650], [500, 650], [500, 680]]},
+    {"id": "u4", "from": "ingress", "to": "nlb", "flow": "lab", "path": [[320, 690], [260, 690], [260, 520], [320, 520]]},
+    {"id": "r1", "from": "user", "to": "nlb", "flow": "request", "path": [[240, 500], [320, 500]]},
+    {"id": "r2", "from": "nlb", "to": "ingress", "flow": "request", "path": [[520, 520], [620, 520], [620, 690], [520, 690]]},
+    {"id": "r3", "from": "ingress", "to": "exitzero", "flow": "request", "status": "planned", "path": [[520, 710], [640, 710]]},
+    {"id": "r4", "from": "exitzero", "to": "anthropic", "flow": "request", "status": "planned", "path": [[820, 680], [820, 650], [1480, 650], [1480, 680]]},
+    {"id": "c1", "from": "ci", "to": "oidc", "flow": "creds", "path": [[490, 220], [490, 170], [970, 170], [970, 120], [1110, 120]]},
+    {"id": "c2", "from": "acii", "to": "oidc", "flow": "creds", "path": [[740, 220], [740, 100], [1110, 100]]},
+    {"id": "c3", "from": "tfplan", "to": "oidc", "flow": "creds", "path": [[990, 220], [990, 140], [1110, 140]]},
+    {"id": "c4", "from": "dev", "to": "secret", "flow": "creds", "path": [[40, 140], [20, 140], [20, 870], [660, 870], [660, 900]]},
+    {"id": "c5", "from": "secret", "to": "exitzero", "flow": "creds", "status": "planned", "path": [[740, 900], [740, 740]]},
+    {"id": "g1", "from": "repo", "to": "argo", "flow": "gitops", "status": "planned", "path": [[470, 150], [470, 200], [540, 200], [540, 420], [980, 420], [980, 680]]},
+    {"id": "g2", "from": "argo", "to": "exitzero", "flow": "gitops", "status": "planned", "path": [[960, 710], [840, 710]]},
+    {"id": "i1", "from": "repo", "to": "tfplan", "flow": "plan", "path": [[510, 120], [830, 120], [830, 220]]},
+    {"id": "i2", "from": "tfplan", "to": "s3", "flow": "plan", "path": [[1010, 250], [1110, 250]]}
+  ]
+}
